@@ -13,19 +13,39 @@ export default function SessionSummary() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Load session data
-        const sessionData = localStorage.getItem(`session_${roomCode}`);
-        const commentsData = localStorage.getItem(`comments_${roomCode}`);
+        const loadSessionData = async () => {
+            // First try to load from localStorage
+            const sessionData = localStorage.getItem(`session_${roomCode}`);
+            const commentsData = localStorage.getItem(`comments_${roomCode}`);
 
-        if (sessionData) {
-            setSession(JSON.parse(sessionData));
-        }
+            if (sessionData) {
+                setSession(JSON.parse(sessionData));
+            }
 
-        if (commentsData) {
-            setComments(JSON.parse(commentsData));
-        }
+            if (commentsData) {
+                setComments(JSON.parse(commentsData));
+            }
 
-        setIsLoading(false);
+            // If no local data, try to fetch from server
+            if (!sessionData) {
+                try {
+                    const res = await fetch(`/api/session?roomCode=${roomCode}`);
+                    const data = await res.json();
+                    if (data.success && data.session) {
+                        setSession(data.session);
+                        if (data.session.comments) {
+                            setComments(data.session.comments);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch session data from server:', error);
+                }
+            }
+
+            setIsLoading(false);
+        };
+
+        loadSessionData();
     }, [roomCode]);
 
     const calculateStats = () => {

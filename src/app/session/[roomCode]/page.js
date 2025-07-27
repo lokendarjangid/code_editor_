@@ -28,6 +28,27 @@ export default function SessionRoom() {
     const [typingUsers, setTypingUsers] = useState([]);
     const [showMobilePanel, setShowMobilePanel] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
+    const [isHost, setIsHost] = useState(false);
+    const [canEdit, setCanEdit] = useState(false);
+    const [editMode, setEditMode] = useState('host-only'); // 'host-only' or 'collaborative'
+
+    // Refs to store current values for socket handlers
+    const sessionRef = useRef(session);
+    const participantsRef = useRef(participants);
+    const commentsRef = useRef(comments);
+
+    // Update refs when state changes
+    useEffect(() => {
+        sessionRef.current = session;
+    }, [session]);
+
+    useEffect(() => {
+        participantsRef.current = participants;
+    }, [participants]);
+
+    useEffect(() => {
+        commentsRef.current = comments;
+    }, [comments]);
 
     // Check if user has seen tutorial
     useEffect(() => {
@@ -39,28 +60,143 @@ export default function SessionRoom() {
 
     // Initialize socket connection
     useEffect(() => {
-        socketRef.current = io();
+        // Clean up any existing socket connection
+        if (socketRef.current) {
+            socketRef.current.disconnect();
+        }
+
+        socketRef.current = io({
+            transports: ['websocket', 'polling'],
+            timeout: 20000,
+            forceNew: true,
+            reconnectionDelay: 1000,
+            reconnection: true,
+            reconnectionAttempts: 5,
+            maxReconnectionAttempts: 5
+        });
 
         socketRef.current.on('connect', () => {
             setIsConnected(true);
             console.log('Connected to server');
         });
 
-        socketRef.current.on('disconnect', () => {
+        socketRef.current.on('disconnect', (reason) => {
             setIsConnected(false);
-            console.log('Disconnected from server');
+            console.log('Disconnected from server:', reason);
+            // Don't redirect on development disconnects or client-side disconnects
+            if (reason === 'io server disconnect') {
+                console.log('Server disconnected the client');
+                // Only redirect if this is an intentional server disconnect
+                // setTimeout(() => router.push('/'), 2000);
+            } else if (reason === 'transport close' || reason === 'transport error') {
+                console.log('Connection lost, likely due to development hot reload');
+                // Don't redirect, let reconnection handle it
+            }
+        });
+
+        socketRef.current.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            setIsConnected(false);
+        });
+
+        socketRef.current.on('session-error', (data) => {
+            console.error('Session error:', data.error);
+            router.push('/');
         });
 
         socketRef.current.on('session-state', (data) => {
-            setParticipants(data.participants);
-            setComments(data.comments);
+            console.log('Session state received:', data);
+            setParticipants(data.participants || []);
+            setComments(data.comments || []);
             if (data.code) {
                 setCode(data.code);
             }
+
+            // Set edit permissions and host status from server response
+            setEditMode(data.editMode || 'host-only');
+
+            // Handle host assignment with fallback logic
+            let actualIsHost = data.isHost || false;
+            let actualHostId = data.hostId;
+
+            // Fallback: if no hostId is set and this is the first/only participant, make them host
+            if (!actualHostId && data.participants && data.participants.length === 1 && participant) {
+                actualIsHost = true;
+                actualHostId = participant.id;
+                console.log('Fallback: Setting first participant as host');
+            }
+
+            setIsHost(actualIsHost);
+            setCanEdit(data.canEdit || actualIsHost); // Host can always edit
+
+            // Update session with hostId from server or fallback
+            setSession(prevSession => ({
+                ...prevSession,
+                hostId: actualHostId,
+                editMode: data.editMode || 'host-only'
+            }));
+
+            console.log('Session state processed:', {
+                isHost: actualIsHost,
+                canEdit: data.canEdit || actualIsHost,
+                editMode: data.editMode || 'host-only',
+                hostId: actualHostId,
+                participantsCount: data.participants?.length || 0
+            });
         });
 
         socketRef.current.on('participant-joined', (data) => {
             setParticipants(data.participants);
+            // Update session with hostId if provided
+            if (data.hostId) {
+                setSession(prevSession => ({
+                    ...prevSession,
+                    hostId: data.hostId
+                }));
+            }
+            console.log('Participant joined, participants updated:', data.participants.length, 'hostId:', data.hostId);
+        });
+
+        socketRef.current.on('edit-mode-changed', (data) => {
+            const { editMode, hostId, participants } = data;
+            setEditMode(editMode); // Update the editMode state
+
+            // Update participants list with new permissions
+            if (participants) {
+                setParticipants(participants);
+            }
+
+            // Update current user's permissions
+            if (participant) {
+                const isHostUser = hostId === participant.id;
+                setIsHost(isHostUser);
+
+                // Find current user in updated participants to get their canEdit status
+                const currentUserInParticipants = participants?.find(p => p.id === participant.id);
+                if (currentUserInParticipants) {
+                    setCanEdit(currentUserInParticipants.canEdit);
+                    console.log('Edit mode changed:', editMode, 'canEdit:', currentUserInParticipants.canEdit);
+                } else {
+                    // Fallback logic
+                    if (editMode === 'collaborative') {
+                        setCanEdit(true);
+                    } else {
+                        setCanEdit(isHostUser);
+                    }
+                    console.log('Edit mode changed (fallback):', editMode, 'canEdit:', editMode === 'collaborative' || isHostUser);
+                }
+            }
+        });
+
+        socketRef.current.on('participant-edit-changed', (data) => {
+            const { participantId, canEdit: newCanEdit, participants: updatedParticipants } = data;
+            if (participant && participant.id === participantId) {
+                setCanEdit(newCanEdit);
+            }
+            // Update participants list with new permissions
+            if (updatedParticipants) {
+                setParticipants(updatedParticipants);
+            }
         });
 
         socketRef.current.on('participant-left', (data) => {
@@ -68,6 +204,7 @@ export default function SessionRoom() {
         });
 
         socketRef.current.on('code-updated', (data) => {
+            console.log('Received code-updated:', data.code.substring(0, 50) + '...');
             setCode(data.code);
         });
 
@@ -94,15 +231,34 @@ export default function SessionRoom() {
             });
         });
 
-        socketRef.current.on('session-ended', () => {
-            // Save session data for summary
+        socketRef.current.on('session-ended', async () => {
+            // Get current state values from refs
+            const currentSession = sessionRef.current;
+            const currentParticipants = participantsRef.current;
+            const currentComments = commentsRef.current;
+
+            // Save session data to localStorage for summary page
             const sessionData = {
-                ...session,
-                participants,
+                ...currentSession,
+                participants: currentParticipants,
+                comments: currentComments,
                 endedAt: new Date().toISOString()
             };
+
+            // Save to localStorage for summary page access
             localStorage.setItem(`session_${roomCode}`, JSON.stringify(sessionData));
-            localStorage.setItem(`comments_${roomCode}`, JSON.stringify(comments));
+            localStorage.setItem(`comments_${roomCode}`, JSON.stringify(currentComments));
+
+            // Also try to save to server
+            try {
+                await fetch('/api/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomCode, sessionData })
+                });
+            } catch (e) {
+                console.warn('Failed to save session data to server:', e);
+            }
 
             // Redirect to summary
             router.push(`/summary/${roomCode}`);
@@ -110,534 +266,56 @@ export default function SessionRoom() {
 
         return () => {
             if (socketRef.current) {
+                console.log('Cleaning up socket connection');
+                socketRef.current.removeAllListeners();
                 socketRef.current.disconnect();
+                socketRef.current = null;
             }
         };
     }, [roomCode, router]);
 
     useEffect(() => {
-        // Load session data
-        const sessionData = localStorage.getItem(`session_${roomCode}`);
-        if (sessionData) {
-            const parsedSession = JSON.parse(sessionData);
-            setSession(parsedSession);
-
-            // Load sample code based on language
-            const sampleCode = getSampleCode(parsedSession.language);
-            setCode(sampleCode);
-        } else {
-            // Session not found
-            router.push('/');
-        }
-        setIsLoading(false);
+        // Fetch session data from server
+        const fetchSession = async () => {
+            try {
+                const res = await fetch(`/api/session?roomCode=${roomCode}`);
+                const data = await res.json();
+                if (data.success && data.session) {
+                    setSession(data.session);
+                    // Set edit mode from session or default to 'host-only'
+                    setEditMode(data.session.editMode || 'host-only');
+                    // Use existing session code, or fallback to sample code
+                    if (data.session.code) {
+                        setCode(data.session.code);
+                    } else {
+                        const sampleCode = getSampleCode(data.session.language);
+                        setCode(sampleCode);
+                    }
+                    // Set existing comments if any
+                    if (data.session.comments) {
+                        setComments(data.session.comments);
+                    }
+                } else {
+                    console.error('Session not found:', data.error);
+                    router.push('/');
+                }
+            } catch (err) {
+                console.error('Error fetching session:', err);
+                router.push('/');
+            }
+            setIsLoading(false);
+        };
+        fetchSession();
     }, [roomCode, router]);
 
     const getSampleCode = (language) => {
         const samples = {
-            javascript: `// JavaScript Code Review Session
-function calculateFactorial(n) {
-    if (n < 0) return undefined;
-    if (n === 0) return 1;
-    let result = 1;
-    for (let i = 1; i <= n; i++) {
-        result *= i;
-    }
-    return result;
-}
-
-// Usage example
-console.log(calculateFactorial(5)); // Should output 120`,
-
-            python: `# Python Code Review Session
-def fibonacci_sequence(n):
-    """Generate fibonacci sequence up to n terms"""
-    if n <= 0:
-        return []
-    elif n == 1:
-        return [0]
-    elif n == 2:
-        return [0, 1]
-    
-    sequence = [0, 1]
-    for i in range(2, n):
-        next_num = sequence[i-1] + sequence[i-2]
-        sequence.append(next_num)
-    
-    return sequence
-
-# Usage example
-print(fibonacci_sequence(10))`,
-
-            java: `// Java Code Review Session
-public class BinarySearch {
-    public static int binarySearch(int[] arr, int target) {
-        int left = 0;
-        int right = arr.length - 1;
-        
-        while (left <= right) {
-            int mid = left + (right - left) / 2;
-            
-            if (arr[mid] == target) {
-                return mid;
-            } else if (arr[mid] < target) {
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-        
-        return -1; // Element not found
-    }
-}`,
-
-            cpp: `// C++ Code Review Session
-#include <iostream>
-#include <vector>
-#include <algorithm>
-
-class QuickSort {
-public:
-    static void quickSort(std::vector<int>& arr, int low, int high) {
-        if (low < high) {
-            int pivot = partition(arr, low, high);
-            quickSort(arr, low, pivot - 1);
-            quickSort(arr, pivot + 1, high);
-        }
-    }
-    
-private:
-    static int partition(std::vector<int>& arr, int low, int high) {
-        int pivot = arr[high];
-        int i = low - 1;
-        
-        for (int j = low; j < high; j++) {
-            if (arr[j] <= pivot) {
-                i++;
-                std::swap(arr[i], arr[j]);
-            }
-        }
-        std::swap(arr[i + 1], arr[high]);
-        return i + 1;
-    }
-};
-
-// Usage example
-int main() {
-    std::vector<int> arr = {64, 34, 25, 12, 22, 11, 90};
-    QuickSort::quickSort(arr, 0, arr.size() - 1);
-    
-    for (int num : arr) {
-        std::cout << num << " ";
-    }
-    return 0;
-}`,
-
-            html: `<!-- HTML Code Review Session -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Todo List</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .todo-item { padding: 10px; border: 1px solid #ddd; margin: 5px 0; }
-        .completed { text-decoration: line-through; opacity: 0.6; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>My Todo List</h1>
-        <form id="todo-form">
-            <input type="text" id="todo-input" placeholder="Add a new task..." required>
-            <button type="submit">Add Task</button>
-        </form>
-        <div id="todo-list"></div>
-    </div>
-    
-    <script>
-        // JavaScript for todo functionality
-        const form = document.getElementById('todo-form');
-        const input = document.getElementById('todo-input');
-        const todoList = document.getElementById('todo-list');
-        
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            addTodo(input.value);
-            input.value = '';
-        });
-        
-        function addTodo(text) {
-            const todoItem = document.createElement('div');
-            todoItem.className = 'todo-item';
-            todoItem.innerHTML = \`
-                <span>\${text}</span>
-                <button onclick="toggleComplete(this)">Complete</button>
-                <button onclick="deleteTodo(this)">Delete</button>
-            \`;
-            todoList.appendChild(todoItem);
-        }
-        
-        function toggleComplete(button) {
-            button.parentElement.classList.toggle('completed');
-        }
-        
-        function deleteTodo(button) {
-            button.parentElement.remove();
-        }
-    </script>
-</body>
-</html>`,
-
-            css: `/* CSS Code Review Session */
-/* Modern Card Component Styling */
-
-.card-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-}
-
-.card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 24px;
-    width: 300px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.card-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.card-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 12px;
-    color: white;
-    font-size: 18px;
-}
-
-.card-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    margin: 0;
-}
-
-.card-description {
-    color: #666;
-    line-height: 1.6;
-    margin-bottom: 20px;
-}
-
-.card-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-}
-
-.btn-primary {
-    background: #667eea;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #5a67d8;
-}
-
-.btn-secondary {
-    background: #e2e8f0;
-    color: #4a5568;
-}
-
-.btn-secondary:hover {
-    background: #cbd5e0;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .card-container {
-        padding: 10px;
-    }
-    
-    .card {
-        width: 100%;
-        max-width: 400px;
-    }
-}`,
-
-            sql: `-- SQL Code Review Session
--- E-commerce Database Schema and Queries
-
--- Create tables
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE products (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
-    stock_quantity INTEGER DEFAULT 0,
-    category_id INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(id)
-);
-
-CREATE TABLE orders (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    total_amount DECIMAL(10, 2) NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE TABLE order_items (
-    id SERIAL PRIMARY KEY,
-    order_id INTEGER NOT NULL,
-    product_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
-);
-
--- Complex query: Get top 5 customers by total spending
-SELECT 
-    u.username,
-    u.email,
-    COUNT(o.id) as total_orders,
-    SUM(o.total_amount) as total_spent,
-    AVG(o.total_amount) as avg_order_value
-FROM users u
-JOIN orders o ON u.id = o.user_id
-WHERE o.status = 'completed'
-    AND o.created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-GROUP BY u.id, u.username, u.email
-HAVING total_spent > 100
-ORDER BY total_spent DESC
-LIMIT 5;
-
--- Query: Products with low stock
-SELECT 
-    p.name,
-    p.stock_quantity,
-    c.name as category_name
-FROM products p
-LEFT JOIN categories c ON p.category_id = c.id
-WHERE p.stock_quantity < 10
-ORDER BY p.stock_quantity ASC;`,
-
-            json: `{
-  "api": {
-    "version": "2.0",
-    "title": "E-commerce API",
-    "description": "RESTful API for managing an e-commerce platform",
-    "baseUrl": "https://api.example.com/v2",
-    "authentication": {
-      "type": "Bearer Token",
-      "header": "Authorization"
-    }
-  },
-  "endpoints": {
-    "users": {
-      "get": {
-        "path": "/users",
-        "method": "GET",
-        "description": "Retrieve all users",
-        "parameters": {
-          "page": {
-            "type": "integer",
-            "default": 1,
-            "description": "Page number for pagination"
-          },
-          "limit": {
-            "type": "integer",
-            "default": 10,
-            "max": 100,
-            "description": "Number of users per page"
-          },
-          "search": {
-            "type": "string",
-            "description": "Search users by name or email"
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "users": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": { "type": "integer" },
-                      "username": { "type": "string" },
-                      "email": { "type": "string" },
-                      "created_at": { "type": "string", "format": "date-time" }
-                    }
-                  }
-                },
-                "pagination": {
-                  "type": "object",
-                  "properties": {
-                    "current_page": { "type": "integer" },
-                    "total_pages": { "type": "integer" },
-                    "total_items": { "type": "integer" }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "error": { "type": "string" },
-                "message": { "type": "string" }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "path": "/users",
-        "method": "POST",
-        "description": "Create a new user",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["username", "email", "password"],
-                "properties": {
-                  "username": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 50
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 8
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "products": {
-      "get": {
-        "path": "/products",
-        "method": "GET",
-        "description": "Retrieve products with filtering and sorting",
-        "parameters": {
-          "category": {
-            "type": "string",
-            "description": "Filter by category"
-          },
-          "price_min": {
-            "type": "number",
-            "description": "Minimum price filter"
-          },
-          "price_max": {
-            "type": "number",
-            "description": "Maximum price filter"
-          },
-          "sort": {
-            "type": "string",
-            "enum": ["name", "price", "created_at"],
-            "default": "created_at"
-          },
-          "order": {
-            "type": "string",
-            "enum": ["asc", "desc"],
-            "default": "desc"
-          }
-        }
-      }
-    }
-  },
-  "models": {
-    "User": {
-      "type": "object",
-      "properties": {
-        "id": { "type": "integer" },
-        "username": { "type": "string" },
-        "email": { "type": "string" },
-        "created_at": { "type": "string", "format": "date-time" },
-        "updated_at": { "type": "string", "format": "date-time" }
-      }
-    },
-    "Product": {
-      "type": "object",
-      "properties": {
-        "id": { "type": "integer" },
-        "name": { "type": "string" },
-        "description": { "type": "string" },
-        "price": { "type": "number" },
-        "stock_quantity": { "type": "integer" },
-        "category_id": { "type": "integer" }
-      }
-    }
-  }
-}`
+            javascript: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\nfunction greetUser(name) {\n    if (!name) {\n        return \"Hello, Guest!\";\n    }\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greetUser(\"World\"));",
+            python: "# Welcome to Peer Rank Code Review!\n# Start reviewing and commenting on the code below\n\ndef greet_user(name):\n    if not name:\n        return \"Hello, Guest!\"\n    return f\"Hello, {name}!\"\n\nprint(greet_user(\"World\"))",
+            java: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println(greetUser(\"World\"));\n    }\n    \n    public static String greetUser(String name) {\n        if (name == null || name.isEmpty()) {\n            return \"Hello, Guest!\";\n        }\n        return \"Hello, \" + name + \"!\";\n    }\n}",
+            cpp: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\n#include <iostream>\n#include <string>\n\nstd::string greetUser(const std::string& name) {\n    if (name.empty()) {\n        return \"Hello, Guest!\";\n    }\n    return \"Hello, \" + name + \"!\";\n}\n\nint main() {\n    std::cout << greetUser(\"World\") << std::endl;\n    return 0;\n}",
+            c: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\n#include <stdio.h>\n#include <string.h>\n\nvoid greetUser(char* result, const char* name) {\n    if (strlen(name) == 0) {\n        strcpy(result, \"Hello, Guest!\");\n    } else {\n        sprintf(result, \"Hello, %s!\", name);\n    }\n}\n\nint main() {\n    char greeting[100];\n    greetUser(greeting, \"World\");\n    printf(\"%s\\n\", greeting);\n    return 0;\n}"
         };
-
         return samples[language] || samples.javascript;
     };
 
@@ -645,7 +323,7 @@ ORDER BY p.stock_quantity ASC;`,
         if (name.trim()) {
             setIsJoining(true);
             const newParticipant = {
-                id: Date.now().toString(),
+                id: `user_${Date.now()}_${Math.random().toString(36).substring(2)}`, // More unique ID
                 name: name.trim(),
                 joinedAt: new Date().toISOString(),
                 score: 0,
@@ -653,9 +331,18 @@ ORDER BY p.stock_quantity ASC;`,
                 votesReceived: 0
             };
 
+            console.log('Creating participant with ID:', newParticipant.id);
             setParticipant(newParticipant);
             setUserName(name.trim());
 
+            // Temporary: Set as host if no participants yet (client-side fallback)
+            if (participants.length === 0) {
+                console.log('Client-side fallback: Setting as host (first participant)');
+                setIsHost(true);
+                setCanEdit(true);
+            }
+
+            // Let server determine host status and edit permissions
             // Join session via socket
             if (socketRef.current) {
                 socketRef.current.emit('join-session', {
@@ -709,18 +396,56 @@ ORDER BY p.stock_quantity ASC;`,
         }
     };
 
+    const handleToggleEditMode = () => {
+        if (isHost && socketRef.current) {
+            const newEditMode = editMode === 'host-only' ? 'collaborative' : 'host-only';
+            socketRef.current.emit('toggle-edit-mode', {
+                roomCode,
+                editMode: newEditMode
+            });
+        }
+    };
+
+    const handleToggleParticipantEdit = (participantId, currentCanEdit) => {
+        if (isHost && socketRef.current) {
+            socketRef.current.emit('toggle-participant-edit', {
+                roomCode,
+                participantId,
+                canEdit: !currentCanEdit
+            });
+        }
+    };
+
     const handleCodeChange = (newCode) => {
+        if (!canEdit) return; // Prevent editing if user doesn't have permission
+
+        console.log('Code changed:', newCode.substring(0, 50) + '...');
         setCode(newCode);
         if (socketRef.current) {
+            console.log('Emitting code-change to room:', roomCode);
             socketRef.current.emit('code-change', {
                 roomCode,
                 code: newCode
             });
+        } else {
+            console.error('Socket not connected when trying to emit code change');
         }
     };
 
     const handleEndSession = () => {
         if (socketRef.current) {
+            // Save session data to localStorage before ending
+            const sessionData = {
+                ...sessionRef.current,
+                participants: participantsRef.current,
+                comments: commentsRef.current,
+                endedAt: new Date().toISOString()
+            };
+
+            localStorage.setItem(`session_${roomCode}`, JSON.stringify(sessionData));
+            localStorage.setItem(`comments_${roomCode}`, JSON.stringify(commentsRef.current));
+
+            // Emit end session event
             socketRef.current.emit('end-session', { roomCode });
         }
     };
@@ -801,67 +526,128 @@ ORDER BY p.stock_quantity ASC;`,
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+            {/* Mobile-Optimized Header */}
+            <div className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-b border-gray-200/50 dark:border-gray-700/50 px-3 lg:px-4 py-2 lg:py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                    {/* Left Section */}
+                    <div className="flex items-center space-x-2 lg:space-x-4 flex-1 min-w-0">
                         <button
                             onClick={() => router.push('/')}
-                            className="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
+                            className="p-1 lg:p-2 text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                             </svg>
                         </button>
-                        <div>
-                            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-sm lg:text-lg font-semibold text-gray-900 dark:text-white truncate">
                                 {session?.sessionName || 'Code Review Session'}
                             </h1>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                                Room: {roomCode} • {session?.language || 'javascript'}
-                                <span className={`ml-2 inline-flex items-center ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-                                    <span className={`w-2 h-2 rounded-full mr-1 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                    {isConnected ? 'Live' : 'Offline'}
+                            <div className="flex items-center space-x-2 text-xs lg:text-sm text-gray-600 dark:text-gray-300">
+                                <span className="font-mono">{roomCode}</span>
+                                <span>•</span>
+                                <span className="truncate">{session?.language || 'javascript'}</span>
+                                <span className={`inline-flex items-center ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full mr-1 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                    <span className="hidden sm:inline">{isConnected ? 'Live' : 'Offline'}</span>
                                 </span>
-                            </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
+                    {/* Right Section */}
+                    <div className="flex items-center space-x-1 lg:space-x-2">
                         <SessionTimer duration={session?.duration || 30} />
+
+                        {/* Host Edit Mode Controls */}
+                        {isHost && (
+                            <button
+                                onClick={handleToggleEditMode}
+                                className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${editMode === 'collaborative'
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                        : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                                    }`}
+                                title={`Switch to ${editMode === 'collaborative' ? 'host-only' : 'collaborative'} mode`}
+                            >
+                                {editMode === 'collaborative' ? 'Collab' : 'Host'}
+                            </button>
+                        )}
+
+                        {/* Debug: Force Host Button (remove in production) */}
+                        {process.env.NODE_ENV === 'development' && !isHost && (
+                            <button
+                                onClick={() => {
+                                    console.log('Force setting as host');
+                                    setIsHost(true);
+                                    setCanEdit(true);
+                                }}
+                                className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-lg"
+                                title="Debug: Force set as host"
+                            >
+                                🔧 Host
+                            </button>
+                        )}
+
                         <button
                             onClick={() => setShowTutorial(true)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-1 px-3 rounded-lg transition duration-200"
+                            className="p-1 lg:p-2 bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm font-medium rounded-lg transition-colors"
                             title="Show tutorial"
                         >
                             ?
                         </button>
                         <button
                             onClick={handleEndSession}
-                            className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-1 px-3 rounded-lg transition duration-200"
+                            className="p-1 lg:p-2 bg-red-600 hover:bg-red-700 text-white text-xs lg:text-sm font-medium rounded-lg transition-colors hidden sm:block"
                         >
-                            End Session
+                            End
                         </button>
-                        <div className="text-sm text-gray-600 dark:text-gray-300">
-                            Welcome, <span className="font-semibold">{participant.name}</span>
-                        </div>
+                        {/* Mobile menu button */}
+                        <button
+                            onClick={() => setShowMobilePanel(!showMobilePanel)}
+                            className="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors lg:hidden"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
+
+                {/* Welcome message - compact on mobile */}
+                <div className="mt-1 lg:mt-2 text-xs lg:text-sm text-gray-600 dark:text-gray-300 truncate">
+                    Welcome, <span className="font-semibold">{participant.name}</span>
+                </div>
+
+                {/* Typing indicator */}
+                {typingUsers.length > 0 && (
+                    <div className="mt-1 text-xs text-blue-600 dark:text-blue-400 animate-pulse">
+                        {typingUsers.map(user => user.participantName).join(', ')} typing...
+                    </div>
+                )}
             </div>
 
-            {/* Main Content */}
-            <div className="flex flex-col lg:flex-row h-[calc(100vh-73px)]">
-                {/* Left Panel - Code Editor */}
-                <div className="flex-1 flex flex-col min-h-0">
-                    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
+            {/* Main Content - Mobile-First Design */}
+            <div className="flex flex-col lg:flex-row h-[calc(100vh-100px)] lg:h-[calc(100vh-73px)]">
+                {/* Code Editor */}
+                <div className="flex-1 flex flex-col min-h-0 order-1">
+                    <div className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-b border-gray-200/50 dark:border-gray-700/50 px-3 lg:px-4 py-2">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">Code Review</h2>
-                            {typingUsers.length > 0 && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 hidden md:block">
-                                    {typingUsers.map(user => user.participantName).join(', ')} typing...
-                                </div>
-                            )}
+                            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                                <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                </svg>
+                                Code Review
+                            </h2>
+                            <div className="flex items-center space-x-2">
+                                {/* Mobile panel toggle */}
+                                <button
+                                    onClick={() => setShowMobilePanel(!showMobilePanel)}
+                                    className="lg:hidden text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-md transition-colors"
+                                >
+                                    {showMobilePanel ? 'Hide Panel' : 'Show Panel'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div className="flex-1 min-h-0 overflow-hidden">
@@ -869,26 +655,19 @@ ORDER BY p.stock_quantity ASC;`,
                             code={code}
                             language={session?.language || 'javascript'}
                             onChange={handleCodeChange}
-                            readOnly={false}
+                            readOnly={!canEdit}
                         />
                     </div>
                 </div>
 
-                {/* Right Panel - Code Execution, Comments and Participants */}
-                <div className="w-full lg:w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col max-h-96 lg:max-h-full">
-                    {/* Mobile Toggle Button */}
-                    <div className="lg:hidden border-b border-gray-200 dark:border-gray-700 p-2">
-                        <button
-                            onClick={() => setShowMobilePanel(!showMobilePanel)}
-                            className="w-full text-center text-sm font-medium text-gray-700 dark:text-gray-300 py-2"
-                        >
-                            {showMobilePanel ? 'Hide' : 'Show'} Panel
-                        </button>
-                    </div>
+                {/* Right Panel - Enhanced Mobile Experience */}
+                <div className={`w-full lg:w-96 bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 border-l border-gray-200/50 dark:border-gray-700/50 flex flex-col ${showMobilePanel ? 'order-2 h-96 lg:h-auto' : 'order-3 lg:order-2 h-0 lg:h-auto overflow-hidden lg:overflow-visible'
+                    } lg:block transition-all duration-300 ease-in-out`}>
 
-                    <div className={`flex-1 flex flex-col ${showMobilePanel ? 'block' : 'hidden lg:flex'}`}>
+                    {/* Panel Content */}
+                    <div className="flex-1 flex flex-col min-h-0">
                         {/* Code Execution Panel */}
-                        <div className="border-b border-gray-200 dark:border-gray-700 p-4">
+                        <div className="border-b border-gray-200/50 dark:border-gray-700/50 p-3 lg:p-4">
                             <CodeExecutionPanel
                                 code={code}
                                 language={session?.language || 'javascript'}
@@ -898,8 +677,19 @@ ORDER BY p.stock_quantity ASC;`,
                         </div>
 
                         {/* Participants */}
-                        <div className="border-b border-gray-200 dark:border-gray-700 max-h-48 lg:max-h-none overflow-y-auto">
-                            <ParticipantsList participants={participants} />
+                        <div className="border-b border-gray-200/50 dark:border-gray-700/50 max-h-32 lg:max-h-48 overflow-y-auto">
+                            <ParticipantsList
+                                participants={participants}
+                                isHost={isHost}
+                                hostId={session?.hostId}
+                                onToggleParticipantEdit={handleToggleParticipantEdit}
+                            />
+                            {/* Debug info - remove in production */}
+                            {process.env.NODE_ENV === 'development' && (
+                                <div className="text-xs text-gray-500 p-2 border-t">
+                                    Debug: isHost={isHost ? 'true' : 'false'}, hostId={session?.hostId || 'undefined'}, sessionHostId={session?.hostId}
+                                </div>
+                            )}
                         </div>
 
                         {/* Comments */}

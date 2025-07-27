@@ -1,36 +1,43 @@
 const { spawn } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
-const tmp = require('tmp');
+const os = require('os');
 
 class CodeExecutor {
     constructor() {
-        this.tempDir = tmp.dirSync({ prefix: 'code-execution-', unsafeCleanup: true });
-        this.executionTimeout = 10000; // 10 seconds timeout
-        this.maxOutputSize = 1024 * 1024; // 1MB max output
+        this.tempDirBase = path.join(os.tmpdir(), 'code-execution');
+        fs.ensureDirSync(this.tempDirBase);
+        this.executionTimeout = 10000;
+        this.maxOutputSize = 1024 * 1024;
     }
 
     async executeCode(code, language) {
         const startTime = Date.now();
-
         try {
+            const executionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const tempDir = path.join(this.tempDirBase, executionId);
+            fs.ensureDirSync(tempDir);
+
+            let result;
             switch (language.toLowerCase()) {
                 case 'javascript':
                 case 'js':
-                    return await this.executeJavaScript(code);
+                    result = await this.executeJavaScript(code, tempDir);
+                    break;
                 case 'python':
                 case 'py':
-                    return await this.executePython(code);
-                case 'java':
-                    return await this.executeJava(code);
-                case 'cpp':
-                case 'c++':
-                    return await this.executeCpp(code);
-                case 'c':
-                    return await this.executeC(code);
+                    result = await this.executePython(code, tempDir);
+                    break;
                 default:
                     throw new Error(`Language ${language} is not supported for execution`);
             }
+
+            try {
+                fs.removeSync(tempDir);
+            } catch (error) {
+                console.warn('Failed to cleanup temp directory:', error);
+            }
+            return result;
         } catch (error) {
             return {
                 success: false,
@@ -41,95 +48,29 @@ class CodeExecutor {
         }
     }
 
-    async executeJavaScript(code) {
-        const filename = path.join(this.tempDir.name, 'script.js');
+    async executeJavaScript(code, tempDir) {
+        const filename = path.join(tempDir, 'script.js');
         await fs.writeFile(filename, code);
-
-        return this.runCommand('node', [filename]);
+        return this.runCommand('node', [filename], tempDir);
     }
 
-    async executePython(code) {
-        const filename = path.join(this.tempDir.name, 'script.py');
+    async executePython(code, tempDir) {
+        const filename = path.join(tempDir, 'script.py');
         await fs.writeFile(filename, code);
-
-        return this.runCommand('python3', [filename]);
+        return this.runCommand('python3', [filename], tempDir);
     }
 
-    async executeJava(code) {
-        // Extract class name from code
-        const classNameMatch = code.match(/public\s+class\s+(\w+)/);
-        const className = classNameMatch ? classNameMatch[1] : 'Main';
-
-        const filename = path.join(this.tempDir.name, `${className}.java`);
-        await fs.writeFile(filename, code);
-
-        // Compile first
-        const compileResult = await this.runCommand('javac', [filename]);
-        if (!compileResult.success) {
-            return compileResult;
-        }
-
-        // Then execute
-        return this.runCommand('java', ['-cp', this.tempDir.name, className]);
-    }
-
-    async executeCpp(code) {
-        const sourceFile = path.join(this.tempDir.name, 'program.cpp');
-        const execFile = path.join(this.tempDir.name, 'program');
-
-        await fs.writeFile(sourceFile, code);
-
-        // Compile first
-        const compileResult = await this.runCommand('g++', [
-            sourceFile,
-            '-o',
-            execFile,
-            '-std=c++17'
-        ]);
-
-        if (!compileResult.success) {
-            return compileResult;
-        }
-
-        // Then execute
-        return this.runCommand(execFile, []);
-    }
-
-    async executeC(code) {
-        const sourceFile = path.join(this.tempDir.name, 'program.c');
-        const execFile = path.join(this.tempDir.name, 'program');
-
-        await fs.writeFile(sourceFile, code);
-
-        // Compile first
-        const compileResult = await this.runCommand('gcc', [
-            sourceFile,
-            '-o',
-            execFile,
-            '-std=c11'
-        ]);
-
-        if (!compileResult.success) {
-            return compileResult;
-        }
-
-        // Then execute
-        return this.runCommand(execFile, []);
-    }
-
-    runCommand(command, args = []) {
+    runCommand(command, args, tempDir) {
         return new Promise((resolve) => {
             const startTime = Date.now();
             let output = '';
             let error = '';
-            let outputSize = 0;
 
             const process = spawn(command, args, {
-                cwd: this.tempDir.name,
+                cwd: tempDir,
                 stdio: ['pipe', 'pipe', 'pipe']
             });
 
-            // Set timeout
             const timeout = setTimeout(() => {
                 process.kill('SIGKILL');
                 resolve({
@@ -141,22 +82,7 @@ class CodeExecutor {
             }, this.executionTimeout);
 
             process.stdout.on('data', (data) => {
-                const chunk = data.toString();
-                outputSize += chunk.length;
-
-                if (outputSize > this.maxOutputSize) {
-                    process.kill('SIGKILL');
-                    clearTimeout(timeout);
-                    resolve({
-                        success: false,
-                        output: output,
-                        error: 'Output size limit exceeded (1MB)',
-                        executionTime: Date.now() - startTime
-                    });
-                    return;
-                }
-
-                output += chunk;
+                output += data.toString();
             });
 
             process.stderr.on('data', (data) => {
@@ -183,14 +109,6 @@ class CodeExecutor {
                 });
             });
         });
-    }
-
-    cleanup() {
-        try {
-            this.tempDir.removeCallback();
-        } catch (error) {
-            console.warn('Failed to cleanup temp directory:', error);
-        }
     }
 }
 

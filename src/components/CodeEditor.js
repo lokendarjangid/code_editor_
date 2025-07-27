@@ -1,150 +1,66 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { EditorView } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
-import { javascript } from '@codemirror/lang-javascript';
-import { python } from '@codemirror/lang-python';
-import { cpp } from '@codemirror/lang-cpp';
-import { java } from '@codemirror/lang-java';
-import { html } from '@codemirror/lang-html';
-import { css } from '@codemirror/lang-css';
-import { sql } from '@codemirror/lang-sql';
-import { json } from '@codemirror/lang-json';
-import { basicSetup } from '@codemirror/basic-setup';
+import { useState, useEffect, useRef } from 'react';
 
 const CodeEditor = ({ code, language, onChange, readOnly = false }) => {
-    const editorRef = useRef(null);
-    const viewRef = useRef(null);
+    const [currentCode, setCurrentCode] = useState(code || '');
+    const textareaRef = useRef(null);
 
-    const getLanguageExtension = (lang) => {
-        switch (lang) {
-            case 'javascript':
-            case 'js':
-                return javascript();
-            case 'python':
-            case 'py':
-                return python();
-            case 'cpp':
-            case 'c++':
-            case 'cxx':
-                return cpp();
-            case 'c':
-                return cpp(); // C and C++ share similar syntax highlighting
-            case 'java':
-                return java();
-            case 'html':
-            case 'htm':
-                return html();
-            case 'css':
-                return css();
-            case 'sql':
-                return sql();
-            case 'json':
-                return json();
-            default:
-                return javascript(); // Default fallback
+    useEffect(() => {
+        setCurrentCode(code || '');
+    }, [code]);
+
+    const handleChange = (e) => {
+        if (readOnly) return; // Don't allow changes in read-only mode
+
+        const newCode = e.target.value;
+        setCurrentCode(newCode);
+        onChange(newCode);
+    };
+
+    const handleKeyDown = (e) => {
+        if (readOnly) return; // Don't handle key events in read-only mode
+
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const { selectionStart, selectionEnd, value } = e.target;
+            const newValue = value.substring(0, selectionStart) + '  ' + value.substring(selectionEnd);
+            e.target.value = newValue;
+            e.target.selectionStart = e.target.selectionEnd = selectionStart + 2;
+
+            setCurrentCode(newValue);
+            onChange(newValue);
         }
     };
 
-    useEffect(() => {
-        if (editorRef.current && !viewRef.current) {
-            try {
-                // Create a minimal set of extensions to avoid conflicts
-                const extensions = [
-                    basicSetup,
-                    getLanguageExtension(language),
-                    EditorView.theme({
-                        '&': {
-                            height: '100%',
-                            fontSize: '14px'
-                        },
-                        '.cm-editor': {
-                            height: '100%'
-                        },
-                        '.cm-scroller': {
-                            height: '100%'
-                        },
-                        '.cm-content': {
-                            padding: '12px'
-                        }
-                    }),
-                    EditorView.updateListener.of((update) => {
-                        if (update.docChanged && onChange) {
-                            onChange(update.state.doc.toString());
-                        }
-                    })
-                ];
-
-                if (readOnly) {
-                    extensions.push(EditorState.readOnly.of(true));
-                }
-
-                const state = EditorState.create({
-                    doc: code || '',
-                    extensions
-                });
-
-                viewRef.current = new EditorView({
-                    state,
-                    parent: editorRef.current
-                });
-            } catch (error) {
-                console.error('Error creating CodeMirror editor:', error);
-                // Fallback to a simple textarea if CodeMirror fails
-                if (editorRef.current) {
-                    editorRef.current.innerHTML = `
-                        <textarea 
-                            class="w-full h-full p-4 font-mono text-sm border-none outline-none resize-none"
-                            value="${code || ''}"
-                            ${readOnly ? 'readonly' : ''}
-                        ></textarea>
-                    `;
-                    if (!readOnly) {
-                        const textarea = editorRef.current.querySelector('textarea');
-                        textarea.addEventListener('input', (e) => {
-                            if (onChange) onChange(e.target.value);
-                        });
-                    }
-                }
-            }
-        }
-
-        return () => {
-            if (viewRef.current) {
-                try {
-                    viewRef.current.destroy();
-                } catch (error) {
-                    console.warn('Error destroying editor:', error);
-                }
-                viewRef.current = null;
-            }
-        };
-    }, [language]);
-
-    useEffect(() => {
-        if (viewRef.current && code !== undefined) {
-            try {
-                const currentContent = viewRef.current.state.doc.toString();
-                if (code !== currentContent) {
-                    const transaction = viewRef.current.state.update({
-                        changes: {
-                            from: 0,
-                            to: currentContent.length,
-                            insert: code
-                        }
-                    });
-                    viewRef.current.dispatch(transaction);
-                }
-            } catch (error) {
-                console.error('Error updating editor content:', error);
-            }
-        }
-    }, [code]);
-
     return (
-        <div className="h-full w-full">
-            <div ref={editorRef} className="h-full w-full" />
+        <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-800 dark:bg-gray-900">
+                <span className="text-sm font-medium text-gray-100 dark:text-gray-200 capitalize">
+                    {language} Editor
+                </span>
+                {readOnly && (
+                    <span className="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                        Viewer Mode
+                    </span>
+                )}
+            </div>
+            <textarea
+                ref={textareaRef}
+                value={currentCode}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                readOnly={readOnly}
+                className={`flex-1 font-mono text-sm p-4 border-0 resize-none focus:outline-none ${readOnly
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 cursor-not-allowed'
+                        : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+                    }`}
+                placeholder={readOnly ? "You are in viewer mode. Ask the host for edit permissions." : "Start coding..."}
+                spellCheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+            />
         </div>
     );
 };
