@@ -40,7 +40,7 @@ export default function LandingPage() {
     }
   };
 
-  const handleJoinSession = async (e) => {
+  const handleJoinSession = async e => {
     e.preventDefault();
     if (!roomCode.trim()) return;
 
@@ -51,7 +51,7 @@ export default function LandingPage() {
     const newSession = {
       roomCode: roomCode.trim().toUpperCase(),
       joinedAt: new Date().toISOString(),
-      sessionName: `Session ${roomCode.trim().toUpperCase()}`
+      sessionName: `Session ${roomCode.trim().toUpperCase()}`,
     };
 
     const updatedRecent = [newSession, ...recent.filter(s => s.roomCode !== newSession.roomCode)].slice(0, 5);
@@ -65,7 +65,9 @@ export default function LandingPage() {
     await checkActiveSession();
 
     if (activeSession) {
-      const joinActive = window.confirm(`Only one session can be active at a time. There's an active session: ${activeSession.sessionName} (${activeSession.roomCode}). Would you like to join it instead?`);
+      const joinActive = window.confirm(
+        `Only one session can be active at a time. There's an active session: ${activeSession.sessionName} (${activeSession.roomCode}). Would you like to join it instead?`
+      );
       if (joinActive) {
         router.push(`/session/${activeSession.roomCode}`);
       }
@@ -75,7 +77,7 @@ export default function LandingPage() {
     router.push('/create');
   };
 
-  const handleQuickJoin = (code) => {
+  const handleQuickJoin = code => {
     setRoomCode(code);
     router.push(`/session/${code}`);
   };
@@ -105,7 +107,12 @@ export default function LandingPage() {
             className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </button>
         </nav>
@@ -116,7 +123,8 @@ export default function LandingPage() {
             Peer Rank
           </h1>
           <p className="text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-6 lg:mb-8 max-w-4xl mx-auto leading-relaxed">
-            Real-time collaborative code review platform where students review, vote, and rank feedback quality
+            Real-time collaborative code review platform where students review, vote, and rank feedback
+            quality
           </p>
 
           {/* Stats */}
@@ -145,15 +153,27 @@ export default function LandingPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center mb-2">
-                      <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-5 h-5 text-blue-600 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200">
                         Active Session Found
                       </h3>
                     </div>
                     <p className="text-blue-700 dark:text-blue-300 mb-3">
-                      There's currently an active session: <strong>{activeSession.sessionName}</strong> ({activeSession.roomCode}) with {activeSession.participantCount} participants.
+                      There's currently an active session:{' '}
+                      <strong>{activeSession.sessionName}</strong> ({activeSession.roomCode}) with{' '}
+                      {activeSession.participantCount} participants.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2">
                       <button
@@ -180,24 +200,41 @@ export default function LandingPage() {
             <div className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 rounded-2xl lg:rounded-3xl shadow-xl p-6 lg:p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <svg className="w-8 h-8 lg:w-10 lg:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  <svg
+                    className="w-8 h-8 lg:w-10 lg:h-10 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                    />
                   </svg>
                 </div>
-                <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-2">Join Session</h2>
-                <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">Enter a room code to join an existing review session</p>
+                <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Join Session
+                </h2>
+                <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">
+                  Enter a room code to join an existing review session
+                </p>
               </div>
 
               <form onSubmit={handleJoinSession} className="space-y-4">
                 <div>
-                  <label htmlFor="roomCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label
+                    htmlFor="roomCode"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     Room Code
                   </label>
                   <input
                     type="text"
                     id="roomCode"
                     value={roomCode}
-                    onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                    onChange={e => setRoomCode(e.target.value.toUpperCase())}
                     placeholder="Enter 6-digit code"
                     className="w-full px-4 py-3 lg:py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700/50 dark:text-white text-center text-lg font-mono tracking-widest transition-all duration-200"
                     maxLength={6}
@@ -223,7 +260,9 @@ export default function LandingPage() {
               {/* Recent Sessions */}
               {recentSessions.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recent Sessions</h3>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Recent Sessions
+                  </h3>
                   <div className="space-y-2">
                     {recentSessions.map((session, index) => (
                       <button
@@ -231,9 +270,21 @@ export default function LandingPage() {
                         onClick={() => handleQuickJoin(session.roomCode)}
                         className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors duration-200 flex items-center justify-between group"
                       >
-                        <span className="font-mono text-blue-600 dark:text-blue-400">{session.roomCode}</span>
-                        <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <span className="font-mono text-blue-600 dark:text-blue-400">
+                          {session.roomCode}
+                        </span>
+                        <svg
+                          className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
                         </svg>
                       </button>
                     ))}
@@ -246,12 +297,26 @@ export default function LandingPage() {
             <div className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 rounded-2xl lg:rounded-3xl shadow-xl p-6 lg:p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <svg className="w-8 h-8 lg:w-10 lg:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  <svg
+                    className="w-8 h-8 lg:w-10 lg:h-10 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
                   </svg>
                 </div>
-                <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-2">Create Session</h2>
-                <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">Start a new code review session with custom settings</p>
+                <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Create Session
+                </h2>
+                <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">
+                  Start a new code review session with custom settings
+                </p>
               </div>
 
               <button
@@ -277,26 +342,66 @@ export default function LandingPage() {
               {/* Quick Features */}
               <div className="space-y-3 text-sm">
                 <div className="flex items-center text-gray-600 dark:text-gray-400">
-                  <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4 mr-2 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   Multiple programming languages
                 </div>
                 <div className="flex items-center text-gray-600 dark:text-gray-400">
-                  <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4 mr-2 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   Real-time collaboration
                 </div>
                 <div className="flex items-center text-gray-600 dark:text-gray-400">
-                  <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4 mr-2 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   Code execution & testing
                 </div>
                 <div className="flex items-center text-gray-600 dark:text-gray-400">
-                  <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4 mr-2 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   Session analytics & ranking
                 </div>
@@ -307,36 +412,80 @@ export default function LandingPage() {
           {/* Features Section */}
           {showFeatures && (
             <div className="max-w-6xl mx-auto px-4 mb-12">
-              <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-900 dark:text-white mb-8 md:mb-12">Platform Features</h3>
+              <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-900 dark:text-white mb-8 md:mb-12">
+                Platform Features
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                 <div className="text-center bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm">
                   <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    <svg
+                      className="w-6 h-6 text-green-600 dark:text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                      />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Real-Time Code Review</h4>
-                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">Collaborative code editing with syntax highlighting and instant feedback</p>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Real-Time Code Review
+                  </h4>
+                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">
+                    Collaborative code editing with syntax highlighting and instant feedback
+                  </p>
                 </div>
 
                 <div className="text-center bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm">
                   <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    <svg
+                      className="w-6 h-6 text-yellow-600 dark:text-yellow-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                      />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Peer Feedback & Voting</h4>
-                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">Give and receive feedback with upvoting system for quality comments</p>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Peer Feedback & Voting
+                  </h4>
+                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">
+                    Give and receive feedback with upvoting system for quality comments
+                  </p>
                 </div>
 
                 <div className="text-center bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm">
                   <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    <svg
+                      className="w-6 h-6 text-red-600 dark:text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Ranking & Analytics</h4>
-                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">Track performance with peer rankings and detailed session analytics</p>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Ranking & Analytics
+                  </h4>
+                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">
+                    Track performance with peer rankings and detailed session analytics
+                  </p>
                 </div>
               </div>
             </div>

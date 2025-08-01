@@ -19,8 +19,11 @@ export default function SessionRoom() {
     const [session, setSession] = useState(null);
     const [participant, setParticipant] = useState(null);
     const [participants, setParticipants] = useState([]);
-    const [code, setCode] = useState('// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\nfunction exampleFunction() {\n    console.log("Hello, World!");\n    return true;\n}');
+    const [code, setCode] = useState(
+        '// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\nfunction exampleFunction() {\n    console.log("Hello, World!");\n    return true;\n}'
+    );
     const [comments, setComments] = useState([]);
+    const [lineComments, setLineComments] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [userName, setUserName] = useState('');
     const [isJoining, setIsJoining] = useState(false);
@@ -72,7 +75,7 @@ export default function SessionRoom() {
             reconnectionDelay: 1000,
             reconnection: true,
             reconnectionAttempts: 5,
-            maxReconnectionAttempts: 5
+            maxReconnectionAttempts: 5,
         });
 
         socketRef.current.on('connect', () => {
@@ -80,7 +83,7 @@ export default function SessionRoom() {
             console.log('Connected to server');
         });
 
-        socketRef.current.on('disconnect', (reason) => {
+        socketRef.current.on('disconnect', reason => {
             setIsConnected(false);
             console.log('Disconnected from server:', reason);
             // Don't redirect on development disconnects or client-side disconnects
@@ -94,20 +97,21 @@ export default function SessionRoom() {
             }
         });
 
-        socketRef.current.on('connect_error', (error) => {
+        socketRef.current.on('connect_error', error => {
             console.error('Socket connection error:', error);
             setIsConnected(false);
         });
 
-        socketRef.current.on('session-error', (data) => {
+        socketRef.current.on('session-error', data => {
             console.error('Session error:', data.error);
             router.push('/');
         });
 
-        socketRef.current.on('session-state', (data) => {
+        socketRef.current.on('session-state', data => {
             console.log('Session state received:', data);
             setParticipants(data.participants || []);
             setComments(data.comments || []);
+            setLineComments(data.lineComments || {});
             if (data.code) {
                 setCode(data.code);
             }
@@ -133,7 +137,7 @@ export default function SessionRoom() {
             setSession(prevSession => ({
                 ...prevSession,
                 hostId: actualHostId,
-                editMode: data.editMode || 'host-only'
+                editMode: data.editMode || 'host-only',
             }));
 
             console.log('Session state processed:', {
@@ -141,23 +145,23 @@ export default function SessionRoom() {
                 canEdit: data.canEdit || actualIsHost,
                 editMode: data.editMode || 'host-only',
                 hostId: actualHostId,
-                participantsCount: data.participants?.length || 0
+                participantsCount: data.participants?.length || 0,
             });
         });
 
-        socketRef.current.on('participant-joined', (data) => {
+        socketRef.current.on('participant-joined', data => {
             setParticipants(data.participants);
             // Update session with hostId if provided
             if (data.hostId) {
                 setSession(prevSession => ({
                     ...prevSession,
-                    hostId: data.hostId
+                    hostId: data.hostId,
                 }));
             }
             console.log('Participant joined, participants updated:', data.participants.length, 'hostId:', data.hostId);
         });
 
-        socketRef.current.on('edit-mode-changed', (data) => {
+        socketRef.current.on('edit-mode-changed', data => {
             const { editMode, hostId, participants } = data;
             setEditMode(editMode); // Update the editMode state
 
@@ -183,12 +187,17 @@ export default function SessionRoom() {
                     } else {
                         setCanEdit(isHostUser);
                     }
-                    console.log('Edit mode changed (fallback):', editMode, 'canEdit:', editMode === 'collaborative' || isHostUser);
+                    console.log(
+                        'Edit mode changed (fallback):',
+                        editMode,
+                        'canEdit:',
+                        editMode === 'collaborative' || isHostUser
+                    );
                 }
             }
         });
 
-        socketRef.current.on('participant-edit-changed', (data) => {
+        socketRef.current.on('participant-edit-changed', data => {
             const { participantId, canEdit: newCanEdit, participants: updatedParticipants } = data;
             if (participant && participant.id === participantId) {
                 setCanEdit(newCanEdit);
@@ -199,29 +208,38 @@ export default function SessionRoom() {
             }
         });
 
-        socketRef.current.on('participant-left', (data) => {
+        socketRef.current.on('participant-left', data => {
             setParticipants(data.participants);
         });
 
-        socketRef.current.on('code-updated', (data) => {
+        socketRef.current.on('code-updated', data => {
             console.log('Received code-updated:', data.code.substring(0, 50) + '...');
             setCode(data.code);
         });
 
-        socketRef.current.on('comment-added', (data) => {
+        socketRef.current.on('comment-added', data => {
             setComments(prev => [...prev, data.comment]);
         });
 
-        socketRef.current.on('comment-voted', (data) => {
-            setComments(prev => prev.map(comment =>
-                comment.id === data.commentId
-                    ? { ...comment, votes: data.votes }
-                    : comment
-            ));
+        socketRef.current.on('comment-voted', data => {
+            setComments(prev =>
+                prev.map(comment => (comment.id === data.commentId ? { ...comment, votes: data.votes } : comment))
+            );
             setParticipants(data.participants);
         });
 
-        socketRef.current.on('user-typing', (data) => {
+        socketRef.current.on('line-comment-added', data => {
+            setLineComments(prev => ({
+                ...prev,
+                [data.lineNumber]: [...(prev[data.lineNumber] || []), data.comment]
+            }));
+        });
+
+        socketRef.current.on('line-comments-updated', data => {
+            setLineComments(data.lineComments || {});
+        });
+
+        socketRef.current.on('user-typing', data => {
             setTypingUsers(prev => {
                 const filtered = prev.filter(user => user.userId !== data.userId);
                 if (data.isTyping) {
@@ -242,7 +260,7 @@ export default function SessionRoom() {
                 ...currentSession,
                 participants: currentParticipants,
                 comments: currentComments,
-                endedAt: new Date().toISOString()
+                endedAt: new Date().toISOString(),
             };
 
             // Save to localStorage for summary page access
@@ -254,7 +272,7 @@ export default function SessionRoom() {
                 await fetch('/api/session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ roomCode, sessionData })
+                    body: JSON.stringify({ roomCode, sessionData }),
                 });
             } catch (e) {
                 console.warn('Failed to save session data to server:', e);
@@ -308,18 +326,19 @@ export default function SessionRoom() {
         fetchSession();
     }, [roomCode, router]);
 
-    const getSampleCode = (language) => {
+    const getSampleCode = language => {
         const samples = {
-            javascript: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\nfunction greetUser(name) {\n    if (!name) {\n        return \"Hello, Guest!\";\n    }\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greetUser(\"World\"));",
-            python: "# Welcome to Peer Rank Code Review!\n# Start reviewing and commenting on the code below\n\ndef greet_user(name):\n    if not name:\n        return \"Hello, Guest!\"\n    return f\"Hello, {name}!\"\n\nprint(greet_user(\"World\"))",
-            java: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println(greetUser(\"World\"));\n    }\n    \n    public static String greetUser(String name) {\n        if (name == null || name.isEmpty()) {\n            return \"Hello, Guest!\";\n        }\n        return \"Hello, \" + name + \"!\";\n    }\n}",
-            cpp: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\n#include <iostream>\n#include <string>\n\nstd::string greetUser(const std::string& name) {\n    if (name.empty()) {\n        return \"Hello, Guest!\";\n    }\n    return \"Hello, \" + name + \"!\";\n}\n\nint main() {\n    std::cout << greetUser(\"World\") << std::endl;\n    return 0;\n}",
-            c: "// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\n#include <stdio.h>\n#include <string.h>\n\nvoid greetUser(char* result, const char* name) {\n    if (strlen(name) == 0) {\n        strcpy(result, \"Hello, Guest!\");\n    } else {\n        sprintf(result, \"Hello, %s!\", name);\n    }\n}\n\nint main() {\n    char greeting[100];\n    greetUser(greeting, \"World\");\n    printf(\"%s\\n\", greeting);\n    return 0;\n}"
+            javascript:
+                '// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\nfunction greetUser(name) {\n    if (!name) {\n        return "Hello, Guest!";\n    }\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greetUser("World"));',
+            python: '# Welcome to Peer Rank Code Review!\n# Start reviewing and commenting on the code below\n\ndef greet_user(name):\n    if not name:\n        return "Hello, Guest!"\n    return f"Hello, {name}!"\n\nprint(greet_user("World"))',
+            java: '// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println(greetUser("World"));\n    }\n    \n    public static String greetUser(String name) {\n        if (name == null || name.isEmpty()) {\n            return "Hello, Guest!";\n        }\n        return "Hello, " + name + "!";\n    }\n}',
+            cpp: '// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\n#include <iostream>\n#include <string>\n\nstd::string greetUser(const std::string& name) {\n    if (name.empty()) {\n        return "Hello, Guest!";\n    }\n    return "Hello, " + name + "!";\n}\n\nint main() {\n    std::cout << greetUser("World") << std::endl;\n    return 0;\n}',
+            c: '// Welcome to Peer Rank Code Review!\n// Start reviewing and commenting on the code below\n\n#include <stdio.h>\n#include <string.h>\n\nvoid greetUser(char* result, const char* name) {\n    if (strlen(name) == 0) {\n        strcpy(result, "Hello, Guest!");\n    } else {\n        sprintf(result, "Hello, %s!", name);\n    }\n}\n\nint main() {\n    char greeting[100];\n    greetUser(greeting, "World");\n    printf("%s\\n", greeting);\n    return 0;\n}',
         };
         return samples[language] || samples.javascript;
     };
 
-    const handleJoinSession = (name) => {
+    const handleJoinSession = name => {
         if (name.trim()) {
             setIsJoining(true);
             const newParticipant = {
@@ -328,7 +347,7 @@ export default function SessionRoom() {
                 joinedAt: new Date().toISOString(),
                 score: 0,
                 commentsCount: 0,
-                votesReceived: 0
+                votesReceived: 0,
             };
 
             console.log('Creating participant with ID:', newParticipant.id);
@@ -347,7 +366,7 @@ export default function SessionRoom() {
             if (socketRef.current) {
                 socketRef.current.emit('join-session', {
                     roomCode,
-                    participant: newParticipant
+                    participant: newParticipant,
                 });
             }
 
@@ -355,7 +374,7 @@ export default function SessionRoom() {
         }
     };
 
-    const handleAddComment = (comment) => {
+    const handleAddComment = comment => {
         if (participant && socketRef.current) {
             const newComment = {
                 id: Date.now().toString(),
@@ -365,25 +384,25 @@ export default function SessionRoom() {
                 line: null,
                 timestamp: new Date().toISOString(),
                 votes: 0,
-                voters: []
+                voters: [],
             };
 
             // Emit via socket for real-time sync
             socketRef.current.emit('new-comment', {
                 roomCode,
-                comment: newComment
+                comment: newComment,
             });
 
             // Update local participant stats
             const updatedParticipant = {
                 ...participant,
-                commentsCount: participant.commentsCount + 1
+                commentsCount: participant.commentsCount + 1,
             };
             setParticipant(updatedParticipant);
         }
     };
 
-    const handleVoteComment = (commentId) => {
+    const handleVoteComment = commentId => {
         if (!participant || !socketRef.current) return;
 
         const comment = comments.find(c => c.id === commentId);
@@ -391,8 +410,34 @@ export default function SessionRoom() {
             socketRef.current.emit('vote-comment', {
                 roomCode,
                 commentId,
-                voterId: participant.id
+                voterId: participant.id,
             });
+        }
+    };
+
+    const handleAddLineComment = (lineNumber, comment) => {
+        if (participant && socketRef.current) {
+            const newLineComment = {
+                id: Date.now().toString(),
+                text: comment.text,
+                author: participant.name,
+                authorId: participant.id,
+                lineNumber: lineNumber,
+                timestamp: new Date().toISOString(),
+            };
+
+            // Emit via socket for real-time sync
+            socketRef.current.emit('new-line-comment', {
+                roomCode,
+                lineNumber,
+                comment: newLineComment,
+            });
+
+            // Update local state immediately for responsiveness
+            setLineComments(prev => ({
+                ...prev,
+                [lineNumber]: [...(prev[lineNumber] || []), newLineComment]
+            }));
         }
     };
 
@@ -401,7 +446,7 @@ export default function SessionRoom() {
             const newEditMode = editMode === 'host-only' ? 'collaborative' : 'host-only';
             socketRef.current.emit('toggle-edit-mode', {
                 roomCode,
-                editMode: newEditMode
+                editMode: newEditMode,
             });
         }
     };
@@ -411,12 +456,12 @@ export default function SessionRoom() {
             socketRef.current.emit('toggle-participant-edit', {
                 roomCode,
                 participantId,
-                canEdit: !currentCanEdit
+                canEdit: !currentCanEdit,
             });
         }
     };
 
-    const handleCodeChange = (newCode) => {
+    const handleCodeChange = newCode => {
         if (!canEdit) return; // Prevent editing if user doesn't have permission
 
         console.log('Code changed:', newCode.substring(0, 50) + '...');
@@ -425,7 +470,7 @@ export default function SessionRoom() {
             console.log('Emitting code-change to room:', roomCode);
             socketRef.current.emit('code-change', {
                 roomCode,
-                code: newCode
+                code: newCode,
             });
         } else {
             console.error('Socket not connected when trying to emit code change');
@@ -439,7 +484,7 @@ export default function SessionRoom() {
                 ...sessionRef.current,
                 participants: participantsRef.current,
                 comments: commentsRef.current,
-                endedAt: new Date().toISOString()
+                endedAt: new Date().toISOString(),
             };
 
             localStorage.setItem(`session_${roomCode}`, JSON.stringify(sessionData));
@@ -466,7 +511,9 @@ export default function SessionRoom() {
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Session Not Found</h1>
-                    <p className="text-gray-600 dark:text-gray-300 mb-4">The session with code "{roomCode}" does not exist.</p>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">
+                        The session with code "{roomCode}" does not exist.
+                    </p>
                     <button
                         onClick={() => router.push('/')}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
@@ -484,29 +531,41 @@ export default function SessionRoom() {
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4">
                     <div className="text-center mb-6">
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Join Session</h1>
-                        <p className="text-gray-600 dark:text-gray-300">Room Code: <span className="font-mono font-bold">{roomCode}</span></p>
-                        {session && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{session.sessionName}</p>}
+                        <p className="text-gray-600 dark:text-gray-300">
+                            Room Code: <span className="font-mono font-bold">{roomCode}</span>
+                        </p>
+                        {session && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{session.sessionName}</p>
+                        )}
                         <div className="flex items-center justify-center mt-2">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <div
+                                className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                            ></div>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {isConnected ? 'Connected' : 'Connecting...'}
                             </span>
                         </div>
                     </div>
 
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        handleJoinSession(userName);
-                    }} className="space-y-4">
+                    <form
+                        onSubmit={e => {
+                            e.preventDefault();
+                            handleJoinSession(userName);
+                        }}
+                        className="space-y-4"
+                    >
                         <div>
-                            <label htmlFor="userName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <label
+                                htmlFor="userName"
+                                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            >
                                 Your Name
                             </label>
                             <input
                                 type="text"
                                 id="userName"
                                 value={userName}
-                                onChange={(e) => setUserName(e.target.value)}
+                                onChange={e => setUserName(e.target.value)}
                                 placeholder="Enter your name..."
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                                 required
@@ -536,8 +595,18 @@ export default function SessionRoom() {
                             onClick={() => router.push('/')}
                             className="p-1 lg:p-2 text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
-                            <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            <svg
+                                className="w-5 h-5 lg:w-6 lg:h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 19l-7-7 7-7"
+                                />
                             </svg>
                         </button>
                         <div className="min-w-0 flex-1">
@@ -548,8 +617,12 @@ export default function SessionRoom() {
                                 <span className="font-mono">{roomCode}</span>
                                 <span>•</span>
                                 <span className="truncate">{session?.language || 'javascript'}</span>
-                                <span className={`inline-flex items-center ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-                                    <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full mr-1 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                <span
+                                    className={`inline-flex items-center ${isConnected ? 'text-green-600' : 'text-red-600'}`}
+                                >
+                                    <span
+                                        className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full mr-1 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                                    ></span>
                                     <span className="hidden sm:inline">{isConnected ? 'Live' : 'Offline'}</span>
                                 </span>
                             </div>
@@ -608,7 +681,12 @@ export default function SessionRoom() {
                             className="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors lg:hidden"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 6h16M4 12h16M4 18h16"
+                                />
                             </svg>
                         </button>
                     </div>
@@ -634,8 +712,18 @@ export default function SessionRoom() {
                     <div className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-b border-gray-200/50 dark:border-gray-700/50 px-3 lg:px-4 py-2">
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                                <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                <svg
+                                    className="w-4 h-4 mr-2 text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                    />
                                 </svg>
                                 Code Review
                             </h2>
@@ -656,14 +744,19 @@ export default function SessionRoom() {
                             language={session?.language || 'javascript'}
                             onChange={handleCodeChange}
                             readOnly={!canEdit}
+                            onAddLineComment={handleAddLineComment}
+                            lineComments={lineComments}
                         />
                     </div>
                 </div>
 
                 {/* Right Panel - Enhanced Mobile Experience */}
-                <div className={`w-full lg:w-96 bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 border-l border-gray-200/50 dark:border-gray-700/50 flex flex-col ${showMobilePanel ? 'order-2 h-96 lg:h-auto' : 'order-3 lg:order-2 h-0 lg:h-auto overflow-hidden lg:overflow-visible'
-                    } lg:block transition-all duration-300 ease-in-out`}>
-
+                <div
+                    className={`w-full lg:w-96 bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 border-l border-gray-200/50 dark:border-gray-700/50 flex flex-col ${showMobilePanel
+                            ? 'order-2 h-96 lg:h-auto'
+                            : 'order-3 lg:order-2 h-0 lg:h-auto overflow-hidden lg:overflow-visible'
+                        } lg:block transition-all duration-300 ease-in-out`}
+                >
                     {/* Panel Content */}
                     <div className="flex-1 flex flex-col min-h-0">
                         {/* Code Execution Panel */}
@@ -687,7 +780,8 @@ export default function SessionRoom() {
                             {/* Debug info - remove in production */}
                             {process.env.NODE_ENV === 'development' && (
                                 <div className="text-xs text-gray-500 p-2 border-t">
-                                    Debug: isHost={isHost ? 'true' : 'false'}, hostId={session?.hostId || 'undefined'}, sessionHostId={session?.hostId}
+                                    Debug: isHost={isHost ? 'true' : 'false'}, hostId={session?.hostId || 'undefined'},
+                                    sessionHostId={session?.hostId}
                                 </div>
                             )}
                         </div>
@@ -706,9 +800,7 @@ export default function SessionRoom() {
             </div>
 
             {/* Help Tutorial */}
-            {showTutorial && (
-                <HelpTutorial onClose={() => setShowTutorial(false)} />
-            )}
+            {showTutorial && <HelpTutorial onClose={() => setShowTutorial(false)} />}
         </div>
     );
 }

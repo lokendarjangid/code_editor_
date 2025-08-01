@@ -8,35 +8,41 @@ const HelpTutorial = ({ onClose }) => {
 
     const tutorialSteps = [
         {
-            title: "Welcome to Peer Rank! 🎉",
-            content: "This is a real-time collaborative code review platform where you can review code, give feedback, and earn points based on the quality of your contributions.",
-            icon: "🚀"
+            title: 'Welcome to Peer Rank! 🎉',
+            content:
+                'This is a real-time collaborative code review platform where you can review code, give feedback, and earn points based on the quality of your contributions.',
+            icon: '🚀',
         },
         {
-            title: "Code Editor",
-            content: "The left panel contains the code editor where you can view and edit the code being reviewed. Changes are synchronized in real-time with all participants.",
-            icon: "💻"
+            title: 'Code Editor',
+            content:
+                'The left panel contains the code editor where you can view and edit the code being reviewed. Changes are synchronized in real-time with all participants.',
+            icon: '💻',
         },
         {
-            title: "Comments & Feedback",
-            content: "Use the comment section to provide constructive feedback about the code. Be specific and helpful in your reviews.",
-            icon: "💬"
+            title: 'Comments & Feedback',
+            content:
+                'Use the comment section to provide constructive feedback about the code. Be specific and helpful in your reviews.',
+            icon: '💬',
         },
         {
-            title: "Voting System",
-            content: "Vote on comments that you find helpful or insightful. Quality feedback gets more votes and earns higher scores.",
-            icon: "👍"
+            title: 'Voting System',
+            content:
+                'Vote on comments that you find helpful or insightful. Quality feedback gets more votes and earns higher scores.',
+            icon: '👍',
         },
         {
-            title: "Rankings & Scoring",
-            content: "Your score is based on the votes your comments receive and your participation level. Higher quality feedback leads to better rankings.",
-            icon: "🏆"
+            title: 'Rankings & Scoring',
+            content:
+                'Your score is based on the votes your comments receive and your participation level. Higher quality feedback leads to better rankings.',
+            icon: '🏆',
         },
         {
-            title: "Best Practices",
-            content: "• Be constructive and specific in your feedback\n• Focus on code quality, performance, and readability\n• Upvote helpful comments from others\n• Stay engaged throughout the session",
-            icon: "✨"
-        }
+            title: 'Best Practices',
+            content:
+                '• Be constructive and specific in your feedback\n• Focus on code quality, performance, and readability\n• Upvote helpful comments from others\n• Stay engaged throughout the session',
+            icon: '✨',
+        },
     ];
 
     const nextStep = () => {
@@ -87,12 +93,13 @@ const HelpTutorial = ({ onClose }) => {
                         {tutorialSteps.map((_, index) => (
                             <div
                                 key={index}
-                                className={`w-2 h-2 rounded-full mx-1 ${index === currentStep
+                                className={`w-2 h-2 rounded-full mx-1 ${
+                                    index === currentStep
                                         ? 'bg-blue-600'
                                         : index < currentStep
-                                            ? 'bg-blue-400'
-                                            : 'bg-gray-300'
-                                    }`}
+                                          ? 'bg-blue-400'
+                                          : 'bg-gray-300'
+                                }`}
                             />
                         ))}
                     </div>

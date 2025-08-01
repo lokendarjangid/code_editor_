@@ -43,7 +43,7 @@ class CodeExecutor {
                 success: false,
                 output: '',
                 error: error.message,
-                executionTime: Date.now() - startTime
+                executionTime: Date.now() - startTime,
             };
         }
     }
@@ -61,14 +61,14 @@ class CodeExecutor {
     }
 
     runCommand(command, args, tempDir) {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             const startTime = Date.now();
             let output = '';
             let error = '';
 
             const process = spawn(command, args, {
                 cwd: tempDir,
-                stdio: ['pipe', 'pipe', 'pipe']
+                stdio: ['pipe', 'pipe', 'pipe'],
             });
 
             const timeout = setTimeout(() => {
@@ -77,35 +77,35 @@ class CodeExecutor {
                     success: false,
                     output: output,
                     error: 'Execution timed out (10 seconds limit)',
-                    executionTime: Date.now() - startTime
+                    executionTime: Date.now() - startTime,
                 });
             }, this.executionTimeout);
 
-            process.stdout.on('data', (data) => {
+            process.stdout.on('data', data => {
                 output += data.toString();
             });
 
-            process.stderr.on('data', (data) => {
+            process.stderr.on('data', data => {
                 error += data.toString();
             });
 
-            process.on('close', (code) => {
+            process.on('close', code => {
                 clearTimeout(timeout);
                 resolve({
                     success: code === 0,
                     output: output.trim(),
                     error: error.trim(),
-                    executionTime: Date.now() - startTime
+                    executionTime: Date.now() - startTime,
                 });
             });
 
-            process.on('error', (err) => {
+            process.on('error', err => {
                 clearTimeout(timeout);
                 resolve({
                     success: false,
                     output: '',
                     error: `Failed to execute: ${err.message}`,
-                    executionTime: Date.now() - startTime
+                    executionTime: Date.now() - startTime,
                 });
             });
         });

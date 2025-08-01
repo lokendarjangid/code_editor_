@@ -11,7 +11,7 @@ const CodeExecutionPanel = ({
     executionResult,
     onClearOutput,
     socketRef,
-    roomCode
+    roomCode,
 }) => {
     const [output, setOutput] = useState('');
     const [error, setError] = useState('');
@@ -27,7 +27,7 @@ const CodeExecutionPanel = ({
 
     useEffect(() => {
         if (socketRef.current) {
-            socketRef.current.on('code-execution-result', (data) => {
+            socketRef.current.on('code-execution-result', data => {
                 setOutput(data.result.output || '');
                 setError(data.result.error || '');
                 setExecutionTime(data.result.executionTime);
@@ -41,13 +41,13 @@ const CodeExecutionPanel = ({
                     success: data.result.success,
                     output: data.result.output,
                     error: data.result.error,
-                    executionTime: data.result.executionTime
+                    executionTime: data.result.executionTime,
                 };
 
                 setExecutionHistory(prev => [historyEntry, ...prev.slice(0, 9)]); // Keep last 10 executions
             });
 
-            socketRef.current.on('code-execution-error', (data) => {
+            socketRef.current.on('code-execution-error', data => {
                 setError(data.error);
                 setOutput('');
                 setExecutionTime(null);
@@ -81,7 +81,7 @@ const CodeExecutionPanel = ({
             socketRef.current.emit('execute-code', {
                 roomCode,
                 code,
-                language
+                language,
             });
         } else if (onExecute) {
             onExecute();
@@ -142,10 +142,11 @@ const CodeExecutionPanel = ({
                     <button
                         onClick={handleExecute}
                         disabled={isExecuting || !code.trim() || !isLanguageSupported}
-                        className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md transition-colors ${isExecuting || !code.trim() || !isLanguageSupported
+                        className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                            isExecuting || !code.trim() || !isLanguageSupported
                                 ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                                 : 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
-                            }`}
+                        }`}
                     >
                         {isExecuting ? (
                             <>
@@ -183,10 +184,13 @@ const CodeExecutionPanel = ({
 
             {/* Language Info */}
             <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md ${isLanguageSupported
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                        : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                    }`}>
+                <span
+                    className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-md ${
+                        isLanguageSupported
+                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                            : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                    }`}
+                >
                     {language}
                 </span>
                 {executionTime && (
@@ -224,9 +228,7 @@ const CodeExecutionPanel = ({
 
                 {!output && !error && !isExecuting && (
                     <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-center">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Click "Run" to execute the code
-                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Click "Run" to execute the code</p>
                     </div>
                 )}
             </div>
@@ -251,26 +253,24 @@ const CodeExecutionPanel = ({
 
                     {isExpanded && (
                         <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                            {executionHistory.map((entry) => (
-                                <div
-                                    key={entry.id}
-                                    className="p-2 bg-gray-50 dark:bg-gray-900 rounded-md text-xs"
-                                >
+                            {executionHistory.map(entry => (
+                                <div key={entry.id} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-md text-xs">
                                     <div className="flex items-center justify-between mb-1">
                                         <span className="text-gray-600 dark:text-gray-400">
                                             {new Date(entry.timestamp).toLocaleTimeString()}
                                         </span>
                                         <div className="flex items-center space-x-1">
-                                            <span className={`px-1 py-0.5 rounded text-xs ${entry.success
-                                                    ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400'
-                                                    : 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
-                                                }`}>
+                                            <span
+                                                className={`px-1 py-0.5 rounded text-xs ${
+                                                    entry.success
+                                                        ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400'
+                                                        : 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                                                }`}
+                                            >
                                                 {entry.success ? '✓' : '✗'}
                                             </span>
                                             {entry.executionTime && (
-                                                <span className="text-gray-500">
-                                                    {entry.executionTime}ms
-                                                </span>
+                                                <span className="text-gray-500">{entry.executionTime}ms</span>
                                             )}
                                         </div>
                                     </div>

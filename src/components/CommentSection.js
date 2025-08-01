@@ -6,7 +6,7 @@ const CommentSection = ({ comments, onAddComment, onVoteComment, currentUserId }
     const [newComment, setNewComment] = useState('');
     const [reportedComments, setReportedComments] = useState([]);
 
-    const handleSubmitComment = (e) => {
+    const handleSubmitComment = e => {
         e.preventDefault();
         if (newComment.trim()) {
             onAddComment(newComment.trim());
@@ -14,7 +14,7 @@ const CommentSection = ({ comments, onAddComment, onVoteComment, currentUserId }
         }
     };
 
-    const handleReportComment = (commentId) => {
+    const handleReportComment = commentId => {
         if (reportedComments.includes(commentId)) return;
 
         const isConfirmed = window.confirm('Are you sure you want to report this comment as inappropriate?');
@@ -25,10 +25,10 @@ const CommentSection = ({ comments, onAddComment, onVoteComment, currentUserId }
         }
     };
 
-    const formatTime = (timestamp) => {
+    const formatTime = timestamp => {
         return new Date(timestamp).toLocaleTimeString('en-US', {
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
         });
     };
 
@@ -36,22 +36,30 @@ const CommentSection = ({ comments, onAddComment, onVoteComment, currentUserId }
         <div className="flex flex-col h-full">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Comments ({comments.length})
-                </h3>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Comments ({comments.length})</h3>
             </div>
 
             {/* Comments List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {comments.length === 0 ? (
                     <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-                        <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        <svg
+                            className="w-12 h-12 mx-auto mb-4 opacity-50"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                            />
                         </svg>
                         <p>No comments yet. Be the first to review!</p>
                     </div>
                 ) : (
-                    comments.map((comment) => (
+                    comments.map(comment => (
                         <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                             <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center space-x-2">
@@ -67,21 +75,24 @@ const CommentSection = ({ comments, onAddComment, onVoteComment, currentUserId }
                                 </div>
                             </div>
 
-                            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                                {comment.text}
-                            </p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{comment.text}</p>
 
                             <div className="flex items-center justify-between">
                                 <button
                                     onClick={() => onVoteComment(comment.id)}
                                     disabled={comment.voters.includes(currentUserId)}
-                                    className={`flex items-center space-x-1 text-xs px-2 py-1 rounded transition-colors ${comment.voters.includes(currentUserId)
+                                    className={`flex items-center space-x-1 text-xs px-2 py-1 rounded transition-colors ${
+                                        comment.voters.includes(currentUserId)
                                             ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                                             : 'bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-300'
-                                        }`}
+                                    }`}
                                 >
                                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                        <path
+                                            fillRule="evenodd"
+                                            d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z"
+                                            clipRule="evenodd"
+                                        />
                                     </svg>
                                     <span>{comment.votes}</span>
                                 </button>
@@ -98,7 +109,11 @@ const CommentSection = ({ comments, onAddComment, onVoteComment, currentUserId }
                                             title="Report inappropriate comment"
                                         >
                                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clipRule="evenodd" />
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z"
+                                                    clipRule="evenodd"
+                                                />
                                             </svg>
                                         </button>
                                     )}
@@ -114,7 +129,7 @@ const CommentSection = ({ comments, onAddComment, onVoteComment, currentUserId }
                 <form onSubmit={handleSubmitComment} className="space-y-3">
                     <textarea
                         value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
+                        onChange={e => setNewComment(e.target.value)}
                         placeholder="Add your feedback or review comment..."
                         className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
                         rows={3}

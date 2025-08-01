@@ -55,17 +55,13 @@ export default function SessionSummary() {
         const totalVotes = comments.reduce((sum, comment) => sum + comment.votes, 0);
         const avgVotesPerComment = totalComments > 0 ? (totalVotes / totalComments).toFixed(1) : 0;
 
-        const topCommenters = session.participants
-            .sort((a, b) => b.commentsCount - a.commentsCount)
-            .slice(0, 3);
+        const topCommenters = session.participants.sort((a, b) => b.commentsCount - a.commentsCount).slice(0, 3);
 
-        const topVotedComments = comments
-            .sort((a, b) => b.votes - a.votes)
-            .slice(0, 5);
+        const topVotedComments = comments.sort((a, b) => b.votes - a.votes).slice(0, 5);
 
         const participationScore = session.participants.reduce((sum, p) => sum + p.score, 0);
-        const avgParticipationScore = session.participants.length > 0 ?
-            (participationScore / session.participants.length).toFixed(1) : 0;
+        const avgParticipationScore =
+            session.participants.length > 0 ? (participationScore / session.participants.length).toFixed(1) : 0;
 
         return {
             totalComments,
@@ -74,11 +70,11 @@ export default function SessionSummary() {
             topCommenters,
             topVotedComments,
             participationScore,
-            avgParticipationScore
+            avgParticipationScore,
         };
     };
 
-    const formatTime = (timestamp) => {
+    const formatTime = timestamp => {
         return new Date(timestamp).toLocaleString();
     };
 
@@ -92,7 +88,7 @@ export default function SessionSummary() {
         return `${duration} minutes`;
     };
 
-    const getRankBadge = (index) => {
+    const getRankBadge = index => {
         const badges = ['🥇', '🥈', '🥉'];
         return badges[index] || `#${index + 1}`;
     };
@@ -165,8 +161,18 @@ export default function SessionSummary() {
                                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{getDuration()}</p>
                                 </div>
                                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                                    <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <svg
+                                        className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
                                 </div>
                             </div>
@@ -176,11 +182,23 @@ export default function SessionSummary() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600 dark:text-gray-300">Participants</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{session.participants.length}</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                        {session.participants.length}
+                                    </p>
                                 </div>
                                 <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                                    <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    <svg
+                                        className="w-6 h-6 text-green-600 dark:text-green-400"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                                        />
                                     </svg>
                                 </div>
                             </div>
@@ -190,11 +208,23 @@ export default function SessionSummary() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600 dark:text-gray-300">Comments</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalComments}</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                        {stats.totalComments}
+                                    </p>
                                 </div>
                                 <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
-                                    <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                    <svg
+                                        className="w-6 h-6 text-yellow-600 dark:text-yellow-400"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                        />
                                     </svg>
                                 </div>
                             </div>
@@ -204,11 +234,23 @@ export default function SessionSummary() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600 dark:text-gray-300">Total Votes</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalVotes}</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                        {stats.totalVotes}
+                                    </p>
                                 </div>
                                 <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                                    <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                                    <svg
+                                        className="w-6 h-6 text-purple-600 dark:text-purple-400"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M7 11l5-5m0 0l5 5m-5-5v12"
+                                        />
                                     </svg>
                                 </div>
                             </div>
@@ -221,21 +263,29 @@ export default function SessionSummary() {
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Final Rankings</h3>
                             <div className="space-y-4">
                                 {finalParticipants.map((participant, index) => (
-                                    <div key={participant.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div
+                                        key={participant.id}
+                                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                                    >
                                         <div className="flex items-center space-x-3">
                                             <span className="text-lg">{getRankBadge(index)}</span>
                                             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
                                                 {participant.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">{participant.name}</p>
+                                                <p className="font-medium text-gray-900 dark:text-white">
+                                                    {participant.name}
+                                                </p>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {participant.commentsCount} comments • {participant.votesReceived} votes
+                                                    {participant.commentsCount} comments • {participant.votesReceived}{' '}
+                                                    votes
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{participant.score}</p>
+                                            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                                {participant.score}
+                                            </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">score</p>
                                         </div>
                                     </div>
@@ -252,12 +302,20 @@ export default function SessionSummary() {
                                         <div key={comment.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center space-x-2">
-                                                    <span className="text-sm font-medium text-gray-900 dark:text-white">{comment.author}</span>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatTime(comment.timestamp)}</span>
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {comment.author}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {formatTime(comment.timestamp)}
+                                                    </span>
                                                 </div>
                                                 <div className="flex items-center space-x-1 text-sm text-blue-600 dark:text-blue-400">
                                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                                        <path
+                                                            fillRule="evenodd"
+                                                            d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z"
+                                                            clipRule="evenodd"
+                                                        />
                                                     </svg>
                                                     <span>{comment.votes}</span>
                                                 </div>
@@ -266,7 +324,9 @@ export default function SessionSummary() {
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">No comments were made during this session.</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                                        No comments were made during this session.
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -277,15 +337,21 @@ export default function SessionSummary() {
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Session Statistics</h3>
                         <div className="grid md:grid-cols-3 gap-6">
                             <div className="text-center">
-                                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.avgVotesPerComment}</p>
+                                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                                    {stats.avgVotesPerComment}
+                                </p>
                                 <p className="text-sm text-gray-600 dark:text-gray-300">Average votes per comment</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.avgParticipationScore}</p>
+                                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                                    {stats.avgParticipationScore}
+                                </p>
                                 <p className="text-sm text-gray-600 dark:text-gray-300">Average participation score</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{session.language}</p>
+                                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                                    {session.language}
+                                </p>
                                 <p className="text-sm text-gray-600 dark:text-gray-300">Programming language</p>
                             </div>
                         </div>

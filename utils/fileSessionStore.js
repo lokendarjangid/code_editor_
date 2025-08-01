@@ -65,9 +65,7 @@ class FileSessionStore {
     getAllRoomCodes() {
         try {
             const files = fs.readdirSync(this.sessionDir);
-            return files
-                .filter(file => file.endsWith('.json'))
-                .map(file => file.replace('.json', ''));
+            return files.filter(file => file.endsWith('.json')).map(file => file.replace('.json', ''));
         } catch (error) {
             console.error('Error getting all room codes:', error);
             return [];
@@ -82,12 +80,17 @@ class FileSessionStore {
 
             roomCodes.forEach(roomCode => {
                 const session = this.get(roomCode);
-                if (session && session.participants && Object.keys(session.participants).length > 0 && !session.isEmpty) {
+                if (
+                    session &&
+                    session.participants &&
+                    Object.keys(session.participants).length > 0 &&
+                    !session.isEmpty
+                ) {
                     activeSessions.push({
                         roomCode,
                         participantCount: Object.keys(session.participants).length,
                         createdAt: session.createdAt,
-                        sessionName: session.sessionName
+                        sessionName: session.sessionName,
                     });
                 }
             });
@@ -133,7 +136,9 @@ class FileSessionStore {
                     const timeSinceEmpty = now - lastActivity;
 
                     if (timeSinceEmpty > EMPTY_SESSION_TIMEOUT) {
-                        console.log(`Cleaning up empty session ${roomCode} - empty for ${Math.round(timeSinceEmpty / 60000)} minutes`);
+                        console.log(
+                            `Cleaning up empty session ${roomCode} - empty for ${Math.round(timeSinceEmpty / 60000)} minutes`
+                        );
                         this.delete(roomCode);
                         cleaned++;
                     }

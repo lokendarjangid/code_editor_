@@ -8,7 +8,7 @@ export default function CreateSession() {
         language: 'javascript',
         duration: 30,
         maxParticipants: 10,
-        sessionName: ''
+        sessionName: '',
     });
     const [isCreating, setIsCreating] = useState(false);
     const [activeSession, setActiveSession] = useState(null);
@@ -43,7 +43,7 @@ export default function CreateSession() {
         return Math.random().toString(36).substring(2, 8).toUpperCase();
     };
 
-    const getSampleCode = (language) => {
+    const getSampleCode = language => {
         const samples = {
             javascript: `// Welcome to Peer Rank Code Review!
 // Start reviewing and commenting on the code below
@@ -189,12 +189,12 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
     "version": "1.0",
     "created": "2024-01-01"
   }
-}`
+}`,
         };
         return samples[language] || samples.javascript;
     };
 
-    const handleCreateSession = async (e) => {
+    const handleCreateSession = async e => {
         e.preventDefault();
         setIsCreating(true);
 
@@ -203,7 +203,9 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
             await checkActiveSession();
 
             if (activeSession) {
-                alert(`Only one session can be active at a time. There's already an active session: ${activeSession.sessionName} (${activeSession.roomCode})`);
+                alert(
+                    `Only one session can be active at a time. There's already an active session: ${activeSession.sessionName} (${activeSession.roomCode})`
+                );
                 setIsCreating(false);
                 return;
             }
@@ -220,21 +222,23 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                 code: getSampleCode(sessionConfig.language),
                 status: 'waiting',
                 hostId: null, // Will be set when host joins
-                editMode: 'host-only' // 'host-only' or 'collaborative'
+                editMode: 'host-only', // 'host-only' or 'collaborative'
             };
 
             // Store session on the server
             const res = await fetch('/api/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roomCode, sessionData })
+                body: JSON.stringify({ roomCode, sessionData }),
             });
             const data = await res.json();
 
             if (!data.success) {
                 if (data.activeSession) {
                     // Show active session info
-                    alert(`Only one session can be active at a time. Active session: ${data.activeSession.sessionName} (${data.activeSession.roomCode}) with ${data.activeSession.participantCount} participants.`);
+                    alert(
+                        `Only one session can be active at a time. Active session: ${data.activeSession.sessionName} (${data.activeSession.roomCode}) with ${data.activeSession.participantCount} participants.`
+                    );
                 } else {
                     throw new Error(data.error || 'Failed to create session');
                 }
@@ -273,8 +277,18 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                             onClick={() => router.push('/')}
                             className="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-3 lg:mb-4 transition-colors"
                         >
-                            <svg className="w-4 h-4 lg:w-5 lg:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            <svg
+                                className="w-4 h-4 lg:w-5 lg:h-5 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 19l-7-7 7-7"
+                                />
                             </svg>
                             Back to Home
                         </button>
@@ -283,8 +297,18 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                     <div className="max-w-2xl mx-auto">
                         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 lg:p-8 text-center">
                             <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                <svg
+                                    className="w-8 h-8 text-yellow-600 dark:text-yellow-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+                                    />
                                 </svg>
                             </div>
 
@@ -352,7 +376,12 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                         onClick={() => router.push('/')}
                         className="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-3 lg:mb-4 transition-colors"
                     >
-                        <svg className="w-4 h-4 lg:w-5 lg:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                            className="w-4 h-4 lg:w-5 lg:h-5 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                         Back to Home
@@ -371,14 +400,17 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                         <form onSubmit={handleCreateSession} className="space-y-4 lg:space-y-6">
                             {/* Session Name */}
                             <div>
-                                <label htmlFor="sessionName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label
+                                    htmlFor="sessionName"
+                                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                >
                                     Session Name
                                 </label>
                                 <input
                                     type="text"
                                     id="sessionName"
                                     value={sessionConfig.sessionName}
-                                    onChange={(e) => setSessionConfig({ ...sessionConfig, sessionName: e.target.value })}
+                                    onChange={e => setSessionConfig({ ...sessionConfig, sessionName: e.target.value })}
                                     placeholder="Enter session name..."
                                     className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700/50 dark:text-white transition-all duration-200"
                                     required
@@ -387,13 +419,16 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
 
                             {/* Programming Language */}
                             <div>
-                                <label htmlFor="language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label
+                                    htmlFor="language"
+                                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                >
                                     Programming Language
                                 </label>
                                 <select
                                     id="language"
                                     value={sessionConfig.language}
-                                    onChange={(e) => setSessionConfig({ ...sessionConfig, language: e.target.value })}
+                                    onChange={e => setSessionConfig({ ...sessionConfig, language: e.target.value })}
                                     className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700/50 dark:text-white transition-all duration-200"
                                 >
                                     <option value="javascript">JavaScript</option>
@@ -411,13 +446,18 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                             {/* Session Duration and Max Participants - Mobile Grid */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="duration" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <label
+                                        htmlFor="duration"
+                                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                    >
                                         Duration (minutes)
                                     </label>
                                     <select
                                         id="duration"
                                         value={sessionConfig.duration}
-                                        onChange={(e) => setSessionConfig({ ...sessionConfig, duration: parseInt(e.target.value) })}
+                                        onChange={e =>
+                                            setSessionConfig({ ...sessionConfig, duration: parseInt(e.target.value) })
+                                        }
                                         className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700/50 dark:text-white transition-all duration-200"
                                     >
                                         <option value={15}>15 minutes</option>
@@ -429,13 +469,21 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                                 </div>
 
                                 <div>
-                                    <label htmlFor="maxParticipants" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <label
+                                        htmlFor="maxParticipants"
+                                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                    >
                                         Max Participants
                                     </label>
                                     <select
                                         id="maxParticipants"
                                         value={sessionConfig.maxParticipants}
-                                        onChange={(e) => setSessionConfig({ ...sessionConfig, maxParticipants: parseInt(e.target.value) })}
+                                        onChange={e =>
+                                            setSessionConfig({
+                                                ...sessionConfig,
+                                                maxParticipants: parseInt(e.target.value),
+                                            })
+                                        }
                                         className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700/50 dark:text-white transition-all duration-200"
                                     >
                                         <option value={5}>5 participants</option>
@@ -468,8 +516,16 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                     <div className="mt-6 lg:mt-8 bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-4 lg:p-6 backdrop-blur-sm">
                         <div className="flex items-start">
                             <div className="flex-shrink-0">
-                                <svg className="h-4 w-4 lg:h-5 lg:w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                <svg
+                                    className="h-4 w-4 lg:h-5 lg:w-5 text-blue-400"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                        clipRule="evenodd"
+                                    />
                                 </svg>
                             </div>
                             <div className="ml-3">
@@ -478,8 +534,9 @@ SELECT * FROM users WHERE name LIKE 'J%';`,
                                 </h3>
                                 <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
                                     <p>
-                                        After creating the session, you'll receive a unique room code to share with participants.
-                                        The session will include sample code based on your selected programming language.
+                                        After creating the session, you'll receive a unique room code to share with
+                                        participants. The session will include sample code based on your selected
+                                        programming language.
                                     </p>
                                 </div>
                             </div>

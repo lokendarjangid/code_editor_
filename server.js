@@ -28,20 +28,20 @@ app.prepare().then(() => {
 
     const io = new Server(server, {
         cors: {
-            origin: "*",
-            methods: ["GET", "POST"]
-        }
+            origin: '*',
+            methods: ['GET', 'POST'],
+        },
     });
 
     // Store participants and session data locally
     const participants = new Map();
 
-    io.on('connection', (socket) => {
+    io.on('connection', socket => {
         console.log('User connected:', socket.id);
 
         // ...existing socket.io event handlers...
         // Join a session room
-        socket.on('join-session', async (data) => {
+        socket.on('join-session', async data => {
             console.log('=== JOIN SESSION START ===');
             console.log('Received join-session data:', JSON.stringify(data, null, 2));
 
@@ -49,11 +49,18 @@ app.prepare().then(() => {
 
             // Get session from local storage
             let session = sessionStore.get(roomCode);
-            console.log('Retrieved session:', JSON.stringify({
-                hostId: session?.hostId,
-                participantsCount: session?.participants ? Object.keys(session.participants).length : 0,
-                isEmpty: session?.isEmpty
-            }, null, 2));
+            console.log(
+                'Retrieved session:',
+                JSON.stringify(
+                    {
+                        hostId: session?.hostId,
+                        participantsCount: session?.participants ? Object.keys(session.participants).length : 0,
+                        isEmpty: session?.isEmpty,
+                    },
+                    null,
+                    2
+                )
+            );
 
             if (!session) {
                 console.error('Session not found:', roomCode);
@@ -80,18 +87,24 @@ app.prepare().then(() => {
             const isFirstParticipant = Object.keys(session.participants).length === 0;
             const isEmptySession = session.isEmpty;
 
-            console.log(`Host assignment check: hasNoHost=${hasNoHost}, isFirstParticipant=${isFirstParticipant}, isEmptySession=${isEmptySession}`);
+            console.log(
+                `Host assignment check: hasNoHost=${hasNoHost}, isFirstParticipant=${isFirstParticipant}, isEmptySession=${isEmptySession}`
+            );
 
             if (hasNoHost && (isFirstParticipant || isEmptySession)) {
                 session.hostId = participant.id;
                 console.log(`Setting ${participant.name} (ID: ${participant.id}) as host for session ${roomCode}`);
             } else {
-                console.log(`Not setting host: hostId=${session.hostId}, participants=${Object.keys(session.participants).length}, isEmpty=${session.isEmpty}`);
+                console.log(
+                    `Not setting host: hostId=${session.hostId}, participants=${Object.keys(session.participants).length}, isEmpty=${session.isEmpty}`
+                );
             }
 
             // Check if this user is the host
             const isHost = participant.id === session.hostId;
-            console.log(`Host check: participant.id=${participant.id}, session.hostId=${session.hostId}, isHost=${isHost}`);
+            console.log(
+                `Host check: participant.id=${participant.id}, session.hostId=${session.hostId}, isHost=${isHost}`
+            );
 
             // Set edit permissions based on host status and edit mode
             let canEdit = false;
@@ -107,7 +120,7 @@ app.prepare().then(() => {
             const participantWithPermissions = {
                 ...participant,
                 isHost,
-                canEdit
+                canEdit,
             };
 
             // Store participant info for socket
@@ -122,7 +135,7 @@ app.prepare().then(() => {
             socket.to(roomCode).emit('participant-joined', {
                 participant: participantWithPermissions,
                 participants: Object.values(session.participants),
-                hostId: session.hostId
+                hostId: session.hostId,
             });
 
             // Send current session state to the new participant
@@ -133,15 +146,17 @@ app.prepare().then(() => {
                 editMode: session.editMode || 'host-only',
                 hostId: session.hostId,
                 isHost,
-                canEdit
+                canEdit,
             });
 
-            console.log(`${participant.name} joined room ${roomCode} as ${isHost ? 'host' : 'participant'} with ${canEdit ? 'edit' : 'view'} permissions`);
+            console.log(
+                `${participant.name} joined room ${roomCode} as ${isHost ? 'host' : 'participant'} with ${canEdit ? 'edit' : 'view'} permissions`
+            );
             console.log(`Session hostId: ${session.hostId}, Participant ID: ${participant.id}, isHost: ${isHost}`);
         });
 
         // Handle code changes
-        socket.on('code-change', async (data) => {
+        socket.on('code-change', async data => {
             const { roomCode, code } = data;
             console.log(`Code change received for room ${roomCode}, code length: ${code.length}`);
 
@@ -182,7 +197,7 @@ app.prepare().then(() => {
         });
 
         // Handle new comments
-        socket.on('new-comment', async (data) => {
+        socket.on('new-comment', async data => {
             const { roomCode, comment } = data;
 
             // Add comment to session directly
@@ -204,7 +219,7 @@ app.prepare().then(() => {
         });
 
         // Handle comment voting
-        socket.on('vote-comment', async (data) => {
+        socket.on('vote-comment', async data => {
             const { roomCode, commentId, voterId } = data;
 
             // Update comment votes in session directly
@@ -221,7 +236,7 @@ app.prepare().then(() => {
                         io.to(roomCode).emit('comment-voted', {
                             commentId,
                             votes: comment.votes,
-                            participants: session.participants ? Object.values(session.participants) : []
+                            participants: session.participants ? Object.values(session.participants) : [],
                         });
                     }
                 } else {
@@ -233,17 +248,17 @@ app.prepare().then(() => {
         });
 
         // Handle typing indicators
-        socket.on('typing', (data) => {
+        socket.on('typing', data => {
             const { roomCode, isTyping } = data;
             socket.to(roomCode).emit('user-typing', {
                 userId: socket.id,
                 participantName: socket.participant?.name,
-                isTyping
+                isTyping,
             });
         });
 
         // Handle code execution requests
-        socket.on('execute-code', async (data) => {
+        socket.on('execute-code', async data => {
             const { roomCode, code, language } = data;
 
             try {
@@ -253,13 +268,13 @@ app.prepare().then(() => {
                 io.to(roomCode).emit('code-execution-result', {
                     executedBy: socket.participant?.name || 'Unknown',
                     result,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
 
                 console.log(`Code executed in ${roomCode} by ${socket.participant?.name}`);
             } catch (error) {
                 socket.emit('code-execution-error', {
-                    error: error.message
+                    error: error.message,
                 });
             }
         });
@@ -279,7 +294,7 @@ app.prepare().then(() => {
                         // Notify others about participant leaving
                         socket.to(socket.roomCode).emit('participant-left', {
                             participantId: socket.id,
-                            participants: Object.values(session.participants)
+                            participants: Object.values(session.participants),
                         });
                         console.log(`${participant.name} left room ${socket.roomCode}`);
 
@@ -302,7 +317,7 @@ app.prepare().then(() => {
         });
 
         // Handle edit mode changes
-        socket.on('toggle-edit-mode', async (data) => {
+        socket.on('toggle-edit-mode', async data => {
             const { roomCode, editMode } = data;
 
             try {
@@ -332,7 +347,7 @@ app.prepare().then(() => {
                     io.to(roomCode).emit('edit-mode-changed', {
                         editMode,
                         hostId: session.hostId,
-                        participants: Object.values(session.participants)
+                        participants: Object.values(session.participants),
                     });
 
                     console.log(`Edit mode changed to ${editMode} in ${roomCode} by host`);
@@ -345,7 +360,7 @@ app.prepare().then(() => {
         });
 
         // Handle individual participant edit permission changes
-        socket.on('toggle-participant-edit', async (data) => {
+        socket.on('toggle-participant-edit', async data => {
             const { roomCode, participantId, canEdit } = data;
 
             try {
@@ -359,10 +374,12 @@ app.prepare().then(() => {
                         io.to(roomCode).emit('participant-edit-changed', {
                             participantId,
                             canEdit,
-                            participants: Object.values(session.participants)
+                            participants: Object.values(session.participants),
                         });
 
-                        console.log(`Edit permission ${canEdit ? 'granted' : 'revoked'} for participant ${participantId} in ${roomCode}`);
+                        console.log(
+                            `Edit permission ${canEdit ? 'granted' : 'revoked'} for participant ${participantId} in ${roomCode}`
+                        );
                     }
                 } else {
                     socket.emit('error', { message: 'Only host can change participant permissions' });
@@ -373,7 +390,7 @@ app.prepare().then(() => {
         });
 
         // Session management
-        socket.on('end-session', async (data) => {
+        socket.on('end-session', async data => {
             const { roomCode } = data;
 
             // Delete session from local storage
@@ -384,14 +401,17 @@ app.prepare().then(() => {
         });
     });
 
-    server.listen(PORT, (err) => {
+    server.listen(PORT, err => {
         if (err) throw err;
         console.log(`> Ready on http://localhost:${PORT}`);
 
         // Clean up empty sessions every 5 minutes
-        setInterval(() => {
-            sessionStore.cleanup();
-        }, 5 * 60 * 1000);
+        setInterval(
+            () => {
+                sessionStore.cleanup();
+            },
+            5 * 60 * 1000
+        );
     });
 });
 
